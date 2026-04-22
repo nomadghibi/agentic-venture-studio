@@ -376,6 +376,51 @@ a {
   line-height: 1.56;
 }
 
+.pricing-card {
+  align-content: start;
+}
+
+.plan-price {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.2rem;
+  font-size: 1.7rem;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.plan-price span {
+  font-size: 0.9rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.plan-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.plan-list li {
+  position: relative;
+  padding-left: 1rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.plan-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55rem;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
 .question-list {
   margin: 0;
   padding: 0;

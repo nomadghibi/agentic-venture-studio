@@ -15,9 +15,9 @@ const bodyFont = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "Agentic Venture Studio | AI-Native Venture Operating System",
+  title: "Agentic Venture Studio | AI Venture Validation Workspace",
   description:
-    "Discover, validate, design, and manage software opportunities from idea to launch with a multi-agent venture pipeline."
+    "Validate startup ideas before you build: market pain, feasibility scoring, monetization analysis, and build-ready product docs in one founder workspace."
 };
 
 export default function RootLayout({

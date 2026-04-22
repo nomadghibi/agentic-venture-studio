@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 
 const SECTION_LINKS = [
-  { id: "product", label: "Product" },
-  { id: "how", label: "How It Works" },
-  { id: "portfolio", label: "Portfolio" },
-  { id: "docs", label: "Docs" }
+  { id: "why", label: "Why This" },
+  { id: "workflow", label: "Workflow" },
+  { id: "pricing", label: "Pricing" },
+  { id: "demo", label: "Demo Plan" }
 ] as const;
 
 type SectionId = (typeof SECTION_LINKS)[number]["id"];
