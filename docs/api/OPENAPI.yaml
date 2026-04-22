@@ -1,0 +1,343 @@
+openapi: 3.1.0
+info:
+  title: Agentic Venture Studio API
+  version: 0.1.0
+  description: MVP API surface for discovery, opportunity management, and workflow orchestration.
+servers:
+  - url: http://localhost:4050/api/v1
+security:
+  - HeaderAuth: []
+paths:
+  /health:
+    get:
+      summary: Health check
+      security: []
+      responses:
+        "200":
+          description: Service status
+  /dashboard/summary:
+    get:
+      summary: Dashboard summary metrics
+      responses:
+        "200":
+          description: Dashboard metrics
+  /opportunities:
+    get:
+      summary: List opportunities
+      responses:
+        "200":
+          description: Opportunity list
+    post:
+      summary: Create opportunity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpportunityCreateInput"
+      responses:
+        "201":
+          description: Opportunity created
+  /opportunities/{id}:
+    get:
+      summary: Get opportunity by id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Opportunity detail
+        "404":
+          description: Not found
+  /opportunities/{id}/score:
+    patch:
+      summary: Update opportunity scoring dimensions and recompute overall score
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpportunityScoreInput"
+      responses:
+        "200":
+          description: Updated opportunity with recalculated score
+        "404":
+          description: Not found
+  /opportunities/{id}/stage:
+    patch:
+      summary: Move opportunity to the next lifecycle stage
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpportunityStageTransitionInput"
+      responses:
+        "200":
+          description: Stage transition result
+        "404":
+          description: Not found
+        "409":
+          description: Invalid stage transition
+  /opportunities/{id}/decision:
+    post:
+      summary: Record a portfolio decision for an opportunity
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpportunityDecisionInput"
+      responses:
+        "200":
+          description: Decision recorded and opportunity updated
+        "404":
+          description: Not found
+        "409":
+          description: Decision conflicts with current approval state
+  /opportunities/{id}/timeline:
+    get:
+      summary: List workflow timeline entries for an opportunity
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Timeline entries
+        "404":
+          description: Not found
+  /opportunities/{id}/approvals:
+    get:
+      summary: List approvals requested for an opportunity
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Approval records
+        "404":
+          description: Opportunity not found
+  /approvals/{id}/review:
+    patch:
+      summary: Review a pending approval record
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApprovalReviewInput"
+      responses:
+        "200":
+          description: Approval updated
+        "404":
+          description: Approval not found
+        "409":
+          description: Approval is no longer pending
+  /signals:
+    post:
+      summary: Ingest signal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignalIngestInput"
+      responses:
+        "202":
+          description: Signal accepted
+components:
+  securitySchemes:
+    HeaderAuth:
+      type: apiKey
+      in: header
+      name: x-user-role
+  schemas:
+    OpportunityCreateInput:
+      type: object
+      required: [title, problemStatement, targetBuyer, industry]
+      properties:
+        title:
+          type: string
+        problemStatement:
+          type: string
+        targetBuyer:
+          type: string
+        industry:
+          type: string
+    OpportunityScoreInput:
+      type: object
+      required:
+        - painScore
+        - frequencyScore
+        - buyerClarityScore
+        - willingnessToPayScore
+        - feasibilityScore
+        - distributionScore
+        - strategicFitScore
+        - portfolioValueScore
+      properties:
+        painScore:
+          type: number
+          minimum: 0
+          maximum: 100
+        frequencyScore:
+          type: number
+          minimum: 0
+          maximum: 100
+        buyerClarityScore:
+          type: number
+          minimum: 0
+          maximum: 100
+        willingnessToPayScore:
+          type: number
+          minimum: 0
+          maximum: 100
+        feasibilityScore:
+          type: number
+          minimum: 0
+          maximum: 100
+        distributionScore:
+          type: number
+          minimum: 0
+          maximum: 100
+        strategicFitScore:
+          type: number
+          minimum: 0
+          maximum: 100
+        portfolioValueScore:
+          type: number
+          minimum: 0
+          maximum: 100
+    OpportunityStageTransitionInput:
+      type: object
+      required: [nextStage]
+      properties:
+        nextStage:
+          type: string
+          enum:
+            - discovery
+            - validation
+            - feasibility
+            - monetization
+            - design
+            - build
+            - launch
+            - live
+            - killed
+            - archived
+        note:
+          type: string
+    OpportunityDecisionInput:
+      type: object
+      required: [decisionType, reason]
+      properties:
+        decisionType:
+          type: string
+          enum: [hold, scale, kill]
+        reason:
+          type: string
+    Approval:
+      type: object
+      required:
+        - id
+        - entityType
+        - entityId
+        - approvalType
+        - status
+        - requestedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        entityType:
+          type: string
+        entityId:
+          type: string
+          format: uuid
+        approvalType:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        requestedBy:
+          type: string
+        reviewedBy:
+          type: string
+        reviewNotes:
+          type: string
+        requestedAt:
+          type: string
+          format: date-time
+        reviewedAt:
+          type: string
+          format: date-time
+    ApprovalReviewInput:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [approved, rejected]
+        reviewNotes:
+          type: string
+    SignalIngestInput:
+      type: object
+      required: [sourceType, contentExcerpt]
+      properties:
+        sourceType:
+          type: string
+        sourceUrl:
+          type: string
+          format: uri
+        sourceTitle:
+          type: string
+        contentExcerpt:
+          type: string
+        opportunityId:
+          type: string
+          format: uuid
+        relevanceScore:
+          type: number
+          minimum: 0
+          maximum: 1
+        isPrimaryEvidence:
+          type: boolean

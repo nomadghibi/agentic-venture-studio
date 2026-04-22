@@ -1,0 +1,27 @@
+{
+  "name": "@avs/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/db/src/index.js",
+  "types": "dist/db/src/index.d.ts",
+  "scripts": {
+    "dev": "tsx watch src/seed/seed.ts",
+    "build": "tsc -p tsconfig.json",
+    "lint": "echo \"No lint config wired yet\"",
+    "typecheck": "tsc --noEmit",
+    "test": "echo \"No tests yet\"",
+    "db:migrate": "tsx src/seed/migrate.ts",
+    "db:seed": "tsx src/seed/seed.ts"
+  },
+  "dependencies": {
+    "@avs/types": "workspace:*",
+    "dotenv": "^16.4.7",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.10",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}
