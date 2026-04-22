@@ -4,6 +4,7 @@ import { registerDashboardRoutes } from "./dashboard.js";
 import { registerHealthRoutes } from "./health.js";
 import { registerOpportunityRoutes } from "./opportunities.js";
 import { registerSignalRoutes } from "./signals.js";
+import { registerVentureRoutes } from "./ventures.js";
 
 export async function registerRoutes(app: FastifyInstance) {
   await registerHealthRoutes(app);
@@ -11,4 +12,5 @@ export async function registerRoutes(app: FastifyInstance) {
   await registerOpportunityRoutes(app);
   await registerApprovalRoutes(app);
   await registerSignalRoutes(app);
+  await registerVentureRoutes(app);
 }

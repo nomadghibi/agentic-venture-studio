@@ -646,6 +646,14 @@ a {
   gap: 1rem;
 }
 
+.topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
 .topbar h1 {
   margin: 0;
   font-size: clamp(1.6rem, 2.3vw, 2.2rem);
@@ -654,6 +662,13 @@ a {
 .topbar p {
   margin: 0.35rem 0 0;
   color: var(--muted);
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-left: auto;
 }
 
 .grid-2 {
@@ -720,6 +735,39 @@ a {
 .workspace-grid {
   display: grid;
   gap: 1rem;
+}
+
+.venture-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.venture-card {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.venture-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.venture-head h2 {
+  margin: 0;
+}
+
+.venture-meta {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.venture-meta p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
 }
 
 .stack {

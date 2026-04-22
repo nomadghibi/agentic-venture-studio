@@ -12,8 +12,15 @@ export default async function WorkspacePage() {
   return (
     <main className="page-shell">
       <header className="topbar">
-        <h1>Agentic Venture Studio Workspace</h1>
-        <p>Discovery to decision workflow console</p>
+        <div>
+          <h1>Agentic Venture Studio Workspace</h1>
+          <p>Discovery to decision workflow console</p>
+        </div>
+        <div className="topbar-actions">
+          <a href="/ventures" className="btn btn-ghost">
+            View Venture Portfolio
+          </a>
+        </div>
       </header>
       <section className="grid-2">
         <DashboardSummary summary={summary} />

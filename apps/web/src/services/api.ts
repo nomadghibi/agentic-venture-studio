@@ -8,6 +8,7 @@ import type {
   OpportunityScoreInput,
   OpportunityStageTransitionInput,
   OpportunityTimelineItem,
+  Venture,
   UserRole
 } from "@avs/types";
 
@@ -175,6 +176,16 @@ export async function reviewApproval(id: string, input: ApprovalReviewInput): Pr
     method: "PATCH",
     body: input
   });
+}
+
+export async function fetchVentures(): Promise<Venture[]> {
+  const data = await request<Venture[]>("/ventures");
+  return data ?? [];
+}
+
+export async function fetchVenture(id: string): Promise<Venture | null> {
+  const data = await request<Venture>(`/ventures/${id}`);
+  return data ?? null;
 }
 
 export function getApiErrorMessage(error: unknown): string {

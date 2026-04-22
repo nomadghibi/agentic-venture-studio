@@ -172,6 +172,27 @@ paths:
           description: Approval not found
         "409":
           description: Approval is no longer pending
+  /ventures:
+    get:
+      summary: List tracked ventures
+      responses:
+        "200":
+          description: Venture list
+  /ventures/{id}:
+    get:
+      summary: Get venture by id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Venture detail
+        "404":
+          description: Venture not found
   /signals:
     post:
       summary: Ingest signal
@@ -319,6 +340,44 @@ components:
           enum: [approved, rejected]
         reviewNotes:
           type: string
+    Venture:
+      type: object
+      required:
+        - id
+        - opportunityId
+        - name
+        - stage
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        opportunityId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        tagline:
+          type: string
+        businessModel:
+          type: string
+        targetMarket:
+          type: string
+        stage:
+          type: string
+        ownerId:
+          type: string
+        launchDate:
+          type: string
+        statusReason:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
     SignalIngestInput:
       type: object
       required: [sourceType, contentExcerpt]
