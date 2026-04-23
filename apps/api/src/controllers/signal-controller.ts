@@ -1,6 +1,10 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { IngestSignalRequestSchema } from "@avs/types";
-import { createSignal, listSignalsForOpportunity } from "../services/signal-service.js";
+import {
+  SignalScopeError,
+  createSignal,
+  listSignalsForOpportunity
+} from "../services/signal-service.js";
 import { z } from "zod";
 
 type PostgresError = Error & { code?: string };
@@ -20,7 +24,7 @@ export async function ingestSignal(
   const payload = IngestSignalRequestSchema.parse(request.body);
 
   try {
-    const { signal, link } = await createSignal(payload);
+    const { signal, link } = await createSignal(payload, request.auth.workspaceId);
     return reply.code(202).send({
       data: {
         ...signal,
@@ -29,6 +33,15 @@ export async function ingestSignal(
       }
     });
   } catch (error) {
+    if (error instanceof SignalScopeError) {
+      return reply.code(404).send({
+        error: {
+          code: "opportunity_not_found",
+          message: error.message
+        }
+      });
+    }
+
     if (isForeignKeyViolation(error)) {
       return reply.code(404).send({
         error: {
@@ -47,6 +60,19 @@ export async function listOpportunitySignals(
   reply: FastifyReply
 ) {
   const params = OpportunityIdParamsSchema.parse(request.params);
-  const data = await listSignalsForOpportunity(params.id);
-  return reply.send({ data });
+  try {
+    const data = await listSignalsForOpportunity(params.id, request.auth.workspaceId);
+    return reply.send({ data });
+  } catch (error) {
+    if (error instanceof SignalScopeError) {
+      return reply.code(404).send({
+        error: {
+          code: "opportunity_not_found",
+          message: error.message
+        }
+      });
+    }
+
+    throw error;
+  }
 }

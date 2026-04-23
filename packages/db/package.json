@@ -6,7 +6,7 @@
   "main": "dist/db/src/index.js",
   "types": "dist/db/src/index.d.ts",
   "scripts": {
-    "dev": "tsx watch src/seed/seed.ts",
+    "dev": "echo \"@avs/db has no standalone dev server\"",
     "build": "tsc -p tsconfig.json",
     "lint": "echo \"No lint config wired yet\"",
     "typecheck": "tsc --noEmit",

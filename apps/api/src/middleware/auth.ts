@@ -1,7 +1,9 @@
 import type { AuthUser, UserRole } from "@avs/types";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { UserRoleValues } from "@avs/types";
+import { getSessionByToken } from "@avs/db";
 import { env } from "../config/env.js";
+import { parseCookieHeader } from "../utils/session-cookie.js";
 
 function parseRole(input: string | undefined): UserRole | null {
   if (!input) {
@@ -11,46 +13,65 @@ function parseRole(input: string | undefined): UserRole | null {
   return UserRoleValues.find((value) => value === input) ?? null;
 }
 
-function resolveAuthUser(request: FastifyRequest): AuthUser | null {
-  const userIdHeader = request.headers["x-user-id"];
-  const roleHeader = request.headers["x-user-role"];
-  const emailHeader = request.headers["x-user-email"];
+function resolveSessionToken(request: FastifyRequest): string | null {
+  const authorizationHeader = request.headers.authorization;
+  if (typeof authorizationHeader === "string") {
+    const [scheme, token] = authorizationHeader.split(" ");
+    if (scheme?.toLowerCase() === "bearer" && token) {
+      return token;
+    }
+  }
 
-  const userId =
-    typeof userIdHeader === "string" && userIdHeader.trim().length > 0
-      ? userIdHeader
-      : env.DEFAULT_USER_ID;
+  const sessionHeader = request.headers["x-session-token"];
+  if (typeof sessionHeader === "string" && sessionHeader.trim().length > 0) {
+    return sessionHeader.trim();
+  }
 
-  const role = parseRole(
-    typeof roleHeader === "string" && roleHeader.trim().length > 0
-      ? roleHeader
-      : env.DEFAULT_USER_ROLE
-  );
+  const cookies = parseCookieHeader(request.headers.cookie);
+  const cookieToken = cookies[env.SESSION_COOKIE_NAME];
 
+  if (typeof cookieToken === "string" && cookieToken.trim().length > 0) {
+    return cookieToken.trim();
+  }
+
+  return null;
+}
+
+async function resolveAuthUser(request: FastifyRequest): Promise<AuthUser | null> {
+  const sessionToken = resolveSessionToken(request);
+
+  if (!sessionToken) {
+    return null;
+  }
+
+  const session = await getSessionByToken(sessionToken);
+  if (!session) {
+    return null;
+  }
+
+  const role = parseRole(session.user.role);
   if (!role) {
     return null;
   }
 
-  const email =
-    typeof emailHeader === "string" && emailHeader.includes("@")
-      ? emailHeader
-      : env.DEFAULT_USER_EMAIL;
-
   return {
-    id: userId,
+    id: session.user.id,
+    name: session.user.name,
     role,
-    email
+    email: session.user.email,
+    workspaceId: session.workspace.id,
+    sessionToken
   };
 }
 
 export async function requireAuth(request: FastifyRequest, reply: FastifyReply) {
-  const user = resolveAuthUser(request);
+  const user = await resolveAuthUser(request);
 
   if (!user) {
     return reply.code(401).send({
       error: {
         code: "unauthorized",
-        message: "Authentication headers are invalid"
+        message: "Authentication required"
       }
     });
   }

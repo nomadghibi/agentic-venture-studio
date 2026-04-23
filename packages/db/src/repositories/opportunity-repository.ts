@@ -32,6 +32,11 @@ type OpportunityRow = {
 };
 
 export type OpportunityInsert = Omit<Opportunity, "id" | "createdAt" | "updatedAt">;
+export type OpportunityCreateInsert = OpportunityInsert & {
+  workspaceId: string;
+  createdBy?: string;
+  ownerId?: string;
+};
 
 type WorkflowEventInsert = {
   opportunityId: string;
@@ -149,12 +154,15 @@ async function resolveExistingUserId(userId?: string): Promise<string | null> {
   return row?.id ?? null;
 }
 
-export async function listOpportunities(): Promise<Opportunity[]> {
-  const result = await db.query(listOpportunitiesSql);
+export async function listOpportunities(workspaceId: string): Promise<Opportunity[]> {
+  const result = await db.query(listOpportunitiesSql, [workspaceId]);
   return result.rows.map((row) => mapRowToOpportunity(row as OpportunityRow));
 }
 
-export async function getOpportunityById(id: string): Promise<Opportunity | null> {
+export async function getOpportunityById(
+  id: string,
+  workspaceId: string
+): Promise<Opportunity | null> {
   const result = await db.query<OpportunityRow>(
     `
       SELECT
@@ -178,9 +186,9 @@ export async function getOpportunityById(id: string): Promise<Opportunity | null
         created_at::text AS created_at,
         updated_at::text AS updated_at
       FROM opportunities
-      WHERE id = $1
+      WHERE id = $1 AND workspace_id = $2
     `,
-    [id]
+    [id, workspaceId]
   );
 
   if (result.rowCount === 0) {
@@ -195,13 +203,16 @@ export async function getOpportunityById(id: string): Promise<Opportunity | null
   return mapRowToOpportunity(row);
 }
 
-export async function createOpportunity(input: OpportunityInsert): Promise<Opportunity> {
+export async function createOpportunity(input: OpportunityCreateInsert): Promise<Opportunity> {
   const id = crypto.randomUUID();
+  const createdBy = await resolveExistingUserId(input.createdBy);
+  const ownerId = await resolveExistingUserId(input.ownerId);
 
   const result = await db.query<OpportunityRow>(
     `
       INSERT INTO opportunities (
         id,
+        workspace_id,
         title,
         problem_statement,
         target_buyer,
@@ -217,7 +228,9 @@ export async function createOpportunity(input: OpportunityInsert): Promise<Oppor
         strategic_fit_score,
         portfolio_value_score,
         overall_score,
-        confidence_level
+        confidence_level,
+        created_by,
+        owner_id
       )
       VALUES (
         $1,
@@ -236,7 +249,9 @@ export async function createOpportunity(input: OpportunityInsert): Promise<Oppor
         $14,
         $15,
         $16,
-        $17
+        $17,
+        $18,
+        $19
       )
       RETURNING
         id,
@@ -261,6 +276,7 @@ export async function createOpportunity(input: OpportunityInsert): Promise<Oppor
     `,
     [
       id,
+      input.workspaceId,
       input.title,
       input.problemStatement,
       input.targetBuyer,
@@ -276,7 +292,9 @@ export async function createOpportunity(input: OpportunityInsert): Promise<Oppor
       input.strategicFitScore,
       input.portfolioValueScore,
       input.overallScore,
-      input.confidenceLevel
+      input.confidenceLevel,
+      createdBy,
+      ownerId
     ]
   );
 
@@ -290,6 +308,7 @@ export async function createOpportunity(input: OpportunityInsert): Promise<Oppor
 
 export async function updateOpportunityScores(
   id: string,
+  workspaceId: string,
   input: OpportunityScoreInput
 ): Promise<Opportunity | null> {
   const overallScore = calculateOverallScore(input);
@@ -299,18 +318,18 @@ export async function updateOpportunityScores(
     `
       UPDATE opportunities
       SET
-        pain_score = $2,
-        frequency_score = $3,
-        buyer_clarity_score = $4,
-        willingness_to_pay_score = $5,
-        feasibility_score = $6,
-        distribution_score = $7,
-        strategic_fit_score = $8,
-        portfolio_value_score = $9,
-        overall_score = $10,
-        confidence_level = $11,
+        pain_score = $3,
+        frequency_score = $4,
+        buyer_clarity_score = $5,
+        willingness_to_pay_score = $6,
+        feasibility_score = $7,
+        distribution_score = $8,
+        strategic_fit_score = $9,
+        portfolio_value_score = $10,
+        overall_score = $11,
+        confidence_level = $12,
         updated_at = NOW()
-      WHERE id = $1
+      WHERE id = $1 AND workspace_id = $2
       RETURNING
         id,
         title,
@@ -334,6 +353,7 @@ export async function updateOpportunityScores(
     `,
     [
       id,
+      workspaceId,
       input.painScore,
       input.frequencyScore,
       input.buyerClarityScore,
@@ -357,6 +377,7 @@ export async function updateOpportunityScores(
 
 export async function updateOpportunityStage(input: {
   opportunityId: string;
+  workspaceId: string;
   nextStage: OpportunityStage;
   status?: OpportunityStatus;
 }): Promise<Opportunity | null> {
@@ -364,10 +385,10 @@ export async function updateOpportunityStage(input: {
     `
       UPDATE opportunities
       SET
-        current_stage = $2,
-        status = COALESCE($3, status),
+        current_stage = $3,
+        status = COALESCE($4, status),
         updated_at = NOW()
-      WHERE id = $1
+      WHERE id = $1 AND workspace_id = $2
       RETURNING
         id,
         title,
@@ -389,7 +410,7 @@ export async function updateOpportunityStage(input: {
         created_at::text AS created_at,
         updated_at::text AS updated_at
     `,
-    [input.opportunityId, input.nextStage, input.status ?? null]
+    [input.opportunityId, input.workspaceId, input.nextStage, input.status ?? null]
   );
 
   const row = result.rows[0];
@@ -455,7 +476,8 @@ export async function createDecisionRecord(input: DecisionRecordInsert): Promise
 }
 
 export async function listOpportunityTimeline(
-  opportunityId: string
+  opportunityId: string,
+  workspaceId: string
 ): Promise<OpportunityTimelineItem[]> {
   const result = await db.query<TimelineRow>(
     `
@@ -480,6 +502,11 @@ export async function listOpportunityTimeline(
       WHERE
         we.entity_type = 'opportunity'
         AND we.entity_id = $1
+        AND EXISTS (
+          SELECT 1
+          FROM opportunities o
+          WHERE o.id = we.entity_id AND o.workspace_id = $2
+        )
         AND we.event_type = 'opportunity_stage_transition'
 
       UNION ALL
@@ -508,6 +535,11 @@ export async function listOpportunityTimeline(
         ) AS metadata
       FROM approvals a
       WHERE a.entity_type = 'opportunity' AND a.entity_id = $1
+        AND EXISTS (
+          SELECT 1
+          FROM opportunities o
+          WHERE o.id = a.entity_id AND o.workspace_id = $2
+        )
 
       UNION ALL
 
@@ -525,10 +557,15 @@ export async function listOpportunityTimeline(
         ) AS metadata
       FROM decision_records d
       WHERE d.entity_type = 'opportunity' AND d.entity_id = $1
+        AND EXISTS (
+          SELECT 1
+          FROM opportunities o
+          WHERE o.id = d.entity_id AND o.workspace_id = $2
+        )
 
       ORDER BY created_at DESC
     `,
-    [opportunityId]
+    [opportunityId, workspaceId]
   );
 
   return result.rows.map((row) => ({

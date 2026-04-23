@@ -22,8 +22,8 @@ const OpportunityIdParamsSchema = z.object({
   id: z.string().uuid()
 });
 
-export async function listOpportunities(_request: FastifyRequest, reply: FastifyReply) {
-  const data = await listOpportunityRecords();
+export async function listOpportunities(request: FastifyRequest, reply: FastifyReply) {
+  const data = await listOpportunityRecords(request.auth.workspaceId);
   return reply.send({ data });
 }
 
@@ -32,7 +32,7 @@ export async function getOpportunity(
   reply: FastifyReply
 ) {
   const params = OpportunityIdParamsSchema.parse(request.params);
-  const record = await getOpportunityRecord(params.id);
+  const record = await getOpportunityRecord(params.id, request.auth.workspaceId);
 
   if (!record) {
     return reply.code(404).send({
@@ -51,7 +51,11 @@ export async function createOpportunity(
   reply: FastifyReply
 ) {
   const payload = OpportunityCreateInputSchema.parse(request.body);
-  const data = await createOpportunityRecord(payload);
+  const data = await createOpportunityRecord(
+    payload,
+    request.auth.workspaceId,
+    request.auth.id
+  );
   return reply.code(201).send({ data });
 }
 
@@ -61,7 +65,12 @@ export async function scoreOpportunity(
 ) {
   const params = OpportunityIdParamsSchema.parse(request.params);
   const payload = UpdateOpportunityScoresRequestSchema.parse(request.body);
-  const data = await scoreOpportunityRecord(params.id, payload, request.auth?.id);
+  const data = await scoreOpportunityRecord(
+    params.id,
+    payload,
+    request.auth.workspaceId,
+    request.auth.id
+  );
 
   if (!data) {
     return reply.code(404).send({
@@ -83,7 +92,12 @@ export async function transitionOpportunityStage(
   const payload = UpdateOpportunityStageRequestSchema.parse(request.body);
 
   try {
-    const data = await transitionOpportunityStageRecord(params.id, payload, request.auth?.id);
+    const data = await transitionOpportunityStageRecord(
+      params.id,
+      payload,
+      request.auth.workspaceId,
+      request.auth.id
+    );
 
     if (!data) {
       return reply.code(404).send({
@@ -116,7 +130,12 @@ export async function decideOpportunity(
   const params = OpportunityIdParamsSchema.parse(request.params);
   const payload = CreateOpportunityDecisionRequestSchema.parse(request.body);
   try {
-    const data = await decideOpportunityRecord(params.id, payload, request.auth?.id);
+    const data = await decideOpportunityRecord(
+      params.id,
+      payload,
+      request.auth.workspaceId,
+      request.auth.id
+    );
 
     if (!data) {
       return reply.code(404).send({
@@ -147,7 +166,7 @@ export async function getOpportunityTimeline(
   reply: FastifyReply
 ) {
   const params = OpportunityIdParamsSchema.parse(request.params);
-  const data = await listOpportunityTimelineRecords(params.id);
+  const data = await listOpportunityTimelineRecords(params.id, request.auth.workspaceId);
 
   if (!data) {
     return reply.code(404).send({

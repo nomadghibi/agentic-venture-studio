@@ -1,0 +1,24 @@
+import { z } from "zod";
+import { UserProfileSchema } from "../entities/user.js";
+import { WorkspaceSchema } from "../entities/workspace.js";
+
+export const AuthLoginInputSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8)
+});
+
+export const AuthRegisterInputSchema = z.object({
+  name: z.string().min(2).max(80),
+  email: z.string().email(),
+  password: z.string().min(8),
+  workspaceName: z.string().min(2).max(80).optional()
+});
+
+export const AuthSessionSchema = z.object({
+  user: UserProfileSchema,
+  workspace: WorkspaceSchema
+});
+
+export type AuthLoginInput = z.infer<typeof AuthLoginInputSchema>;
+export type AuthRegisterInput = z.infer<typeof AuthRegisterInputSchema>;
+export type AuthSession = z.infer<typeof AuthSessionSchema>;

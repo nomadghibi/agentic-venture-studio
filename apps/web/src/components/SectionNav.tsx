@@ -92,8 +92,8 @@ export function SectionNav() {
           );
         })}
       </nav>
-      <a href="/workspace" className="btn btn-ghost nav-cta">
-        Open Workspace
+      <a href="/login" className="btn btn-ghost nav-cta">
+        Start Free Trial
       </a>
     </header>
   );

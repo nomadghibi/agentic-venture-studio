@@ -135,8 +135,8 @@ export default function HomePage() {
             engineering time and capital.
           </p>
           <div className="hero-actions">
-            <a href="/workspace" className="btn btn-primary">
-              Open Validation Workspace
+            <a href="/login" className="btn btn-primary">
+              Start Free Trial
             </a>
             <a href="#workflow" className="btn btn-ghost">
               See Validation Flow
@@ -279,8 +279,8 @@ export default function HomePage() {
           Keep the long-term brand, but sell the wedge now: an AI Venture Validation
           Workspace founders can trust before they commit build resources.
         </p>
-        <a href="/workspace" className="btn btn-primary">
-          Start In Workspace
+        <a href="/login" className="btn btn-primary">
+          Create Founder Account
         </a>
       </section>
 

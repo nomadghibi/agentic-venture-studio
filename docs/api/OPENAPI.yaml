@@ -6,7 +6,7 @@ info:
 servers:
   - url: http://localhost:4050/api/v1
 security:
-  - HeaderAuth: []
+  - SessionCookieAuth: []
 paths:
   /health:
     get:
@@ -15,6 +15,81 @@ paths:
       responses:
         "200":
           description: Service status
+  /auth/register:
+    post:
+      summary: Create founder account and start session
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthRegisterInput"
+      responses:
+        "201":
+          description: Authenticated session
+        "409":
+          description: Email already exists
+  /auth/login:
+    post:
+      summary: Sign in and start session
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthLoginInput"
+      responses:
+        "200":
+          description: Authenticated session
+        "401":
+          description: Invalid credentials
+  /auth/me:
+    get:
+      summary: Get current authenticated session
+      responses:
+        "200":
+          description: Current session
+        "401":
+          description: Session not found
+  /auth/logout:
+    post:
+      summary: End active session
+      responses:
+        "200":
+          description: Session cleared
+  /workspaces:
+    get:
+      summary: List workspaces available to the signed-in user
+      responses:
+        "200":
+          description: Workspace options
+    post:
+      summary: Create a workspace and set it as current
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWorkspaceInput"
+      responses:
+        "201":
+          description: Workspace created and selected
+  /workspaces/{id}/select:
+    post:
+      summary: Switch active workspace for current session
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Workspace switched
+        "404":
+          description: Workspace not found for user
   /dashboard/summary:
     get:
       summary: Dashboard summary metrics
@@ -207,11 +282,80 @@ paths:
           description: Signal accepted
 components:
   securitySchemes:
-    HeaderAuth:
+    SessionCookieAuth:
       type: apiKey
-      in: header
-      name: x-user-role
+      in: cookie
+      name: avs_session
   schemas:
+    AuthLoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+    AuthRegisterInput:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        workspaceName:
+          type: string
+    UserProfile:
+      type: object
+      required: [id, name, email, role]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+    Workspace:
+      type: object
+      required: [id, name, slug, role, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        role:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    AuthSession:
+      type: object
+      required: [user, workspace]
+      properties:
+        user:
+          $ref: "#/components/schemas/UserProfile"
+        workspace:
+          $ref: "#/components/schemas/Workspace"
+    CreateWorkspaceInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
     OpportunityCreateInput:
       type: object
       required: [title, problemStatement, targetBuyer, industry]

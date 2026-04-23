@@ -48,7 +48,10 @@ async function resolveExistingUserId(userId?: string): Promise<string | null> {
   return row?.id ?? null;
 }
 
-export async function listApprovalsForOpportunity(opportunityId: string): Promise<Approval[]> {
+export async function listApprovalsForOpportunity(
+  opportunityId: string,
+  workspaceId: string
+): Promise<Approval[]> {
   const result = await db.query<ApprovalRow>(
     `
       SELECT
@@ -63,23 +66,41 @@ export async function listApprovalsForOpportunity(opportunityId: string): Promis
         requested_at::text AS requested_at,
         reviewed_at::text AS reviewed_at
       FROM approvals
-      WHERE entity_type = 'opportunity' AND entity_id = $1
+      WHERE
+        entity_type = 'opportunity'
+        AND entity_id = $1
+        AND EXISTS (
+          SELECT 1
+          FROM opportunities o
+          WHERE o.id = approvals.entity_id AND o.workspace_id = $2
+        )
       ORDER BY requested_at DESC
     `,
-    [opportunityId]
+    [opportunityId, workspaceId]
   );
 
   return result.rows.map((row) => mapApproval(row));
 }
 
-export async function countPendingApprovalsForOpportunity(opportunityId: string): Promise<number> {
+export async function countPendingApprovalsForOpportunity(
+  opportunityId: string,
+  workspaceId: string
+): Promise<number> {
   const result = await db.query<{ count: string }>(
     `
       SELECT COUNT(*)::text AS count
       FROM approvals
-      WHERE entity_type = 'opportunity' AND entity_id = $1 AND status = 'pending'
+      WHERE
+        entity_type = 'opportunity'
+        AND entity_id = $1
+        AND status = 'pending'
+        AND EXISTS (
+          SELECT 1
+          FROM opportunities o
+          WHERE o.id = approvals.entity_id AND o.workspace_id = $2
+        )
     `,
-    [opportunityId]
+    [opportunityId, workspaceId]
   );
 
   const row = result.rows[0];
@@ -88,6 +109,7 @@ export async function countPendingApprovalsForOpportunity(opportunityId: string)
 
 export async function createApprovalRequest(input: {
   opportunityId: string;
+  workspaceId: string;
   approvalType: string;
   requestedBy?: string;
 }): Promise<string> {
@@ -100,9 +122,14 @@ export async function createApprovalRequest(input: {
         AND entity_id = $1
         AND approval_type = $2
         AND status = 'pending'
+        AND EXISTS (
+          SELECT 1
+          FROM opportunities o
+          WHERE o.id = approvals.entity_id AND o.workspace_id = $3
+        )
       LIMIT 1
     `,
-    [input.opportunityId, input.approvalType]
+    [input.opportunityId, input.approvalType, input.workspaceId]
   );
 
   const existingId = existing.rows[0]?.id;
@@ -134,6 +161,7 @@ export async function createApprovalRequest(input: {
 export async function reviewApproval(
   approvalId: string,
   input: ApprovalReviewInput,
+  workspaceId: string,
   reviewedBy?: string
 ): Promise<Approval | null> {
   const reviewerId = await resolveExistingUserId(reviewedBy);
@@ -145,7 +173,14 @@ export async function reviewApproval(
         reviewed_by = $3,
         review_notes = $4,
         reviewed_at = NOW()
-      WHERE id = $1 AND status = 'pending'
+      WHERE
+        id = $1
+        AND status = 'pending'
+        AND EXISTS (
+          SELECT 1
+          FROM opportunities o
+          WHERE o.id = approvals.entity_id AND o.workspace_id = $5
+        )
       RETURNING
         id,
         entity_type,
@@ -158,7 +193,7 @@ export async function reviewApproval(
         requested_at::text AS requested_at,
         reviewed_at::text AS reviewed_at
     `,
-    [approvalId, input.status, reviewerId, input.reviewNotes ?? null]
+    [approvalId, input.status, reviewerId, input.reviewNotes ?? null, workspaceId]
   );
 
   const row = result.rows[0];
@@ -169,7 +204,10 @@ export async function reviewApproval(
   return mapApproval(row);
 }
 
-export async function getApprovalById(approvalId: string): Promise<Approval | null> {
+export async function getApprovalById(
+  approvalId: string,
+  workspaceId: string
+): Promise<Approval | null> {
   const result = await db.query<ApprovalRow>(
     `
       SELECT
@@ -184,10 +222,16 @@ export async function getApprovalById(approvalId: string): Promise<Approval | nu
         requested_at::text AS requested_at,
         reviewed_at::text AS reviewed_at
       FROM approvals
-      WHERE id = $1
+      WHERE
+        id = $1
+        AND EXISTS (
+          SELECT 1
+          FROM opportunities o
+          WHERE o.id = approvals.entity_id AND o.workspace_id = $2
+        )
       LIMIT 1
     `,
-    [approvalId]
+    [approvalId, workspaceId]
   );
 
   const row = result.rows[0];

@@ -6,8 +6,8 @@ const VentureIdParamsSchema = z.object({
   id: z.string().uuid()
 });
 
-export async function listVentures(_request: FastifyRequest, reply: FastifyReply) {
-  const data = await listVentureRecords();
+export async function listVentures(request: FastifyRequest, reply: FastifyReply) {
+  const data = await listVentureRecords(request.auth.workspaceId);
   return reply.send({ data });
 }
 
@@ -16,7 +16,7 @@ export async function getVenture(
   reply: FastifyReply
 ) {
   const params = VentureIdParamsSchema.parse(request.params);
-  const data = await getVentureRecord(params.id);
+  const data = await getVentureRecord(params.id, request.auth.workspaceId);
 
   if (!data) {
     return reply.code(404).send({

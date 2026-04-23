@@ -113,17 +113,26 @@ function approvalTypeForStage(stage: OpportunityStage): string | null {
   return null;
 }
 
-export async function listOpportunities(): Promise<Opportunity[]> {
-  return listOpportunityRecords();
+export async function listOpportunities(workspaceId: string): Promise<Opportunity[]> {
+  return listOpportunityRecords(workspaceId);
 }
 
-export async function getOpportunity(id: string): Promise<Opportunity | null> {
-  return getOpportunityById(id);
+export async function getOpportunity(
+  id: string,
+  workspaceId: string
+): Promise<Opportunity | null> {
+  return getOpportunityById(id, workspaceId);
 }
 
-export async function createOpportunity(input: OpportunityCreateInput): Promise<Opportunity> {
+export async function createOpportunity(
+  input: OpportunityCreateInput,
+  workspaceId: string,
+  actorId?: string
+): Promise<Opportunity> {
   return createOpportunityRecord({
     ...input,
+    workspaceId,
+    ...(actorId ? { createdBy: actorId, ownerId: actorId } : {}),
     status: "active",
     currentStage: "discovery",
     confidenceLevel: "medium",
@@ -142,9 +151,10 @@ export async function createOpportunity(input: OpportunityCreateInput): Promise<
 export async function scoreOpportunity(
   id: string,
   input: OpportunityScoreInput,
+  workspaceId: string,
   actorId?: string
 ): Promise<Opportunity | null> {
-  const updated = await updateOpportunityScoresRecord(id, input);
+  const updated = await updateOpportunityScoresRecord(id, workspaceId, input);
   if (!updated) {
     return null;
   }
@@ -171,14 +181,15 @@ type StageTransitionResult = {
 export async function transitionOpportunityStage(
   id: string,
   input: OpportunityStageTransitionInput,
+  workspaceId: string,
   actorId?: string
 ): Promise<StageTransitionResult | null> {
-  const current = await getOpportunityById(id);
+  const current = await getOpportunityById(id, workspaceId);
   if (!current) {
     return null;
   }
 
-  const pendingApprovals = await countPendingApprovalsForOpportunity(id);
+  const pendingApprovals = await countPendingApprovalsForOpportunity(id, workspaceId);
   if (pendingApprovals > 0) {
     throw new StageTransitionError("Cannot transition stages while approvals are pending");
   }
@@ -188,6 +199,7 @@ export async function transitionOpportunityStage(
   const nextStatus = statusForStage(input.nextStage);
   const updated = await updateOpportunityStageRecord({
     opportunityId: id,
+    workspaceId,
     nextStage: input.nextStage,
     status: nextStatus
   });
@@ -215,6 +227,7 @@ export async function transitionOpportunityStage(
 
   const approvalId = await createApprovalRequest({
     opportunityId: id,
+    workspaceId,
     approvalType,
     ...(actorId ? { requestedBy: actorId } : {})
   });
@@ -234,14 +247,15 @@ type DecisionResult = {
 export async function decideOpportunity(
   id: string,
   input: OpportunityDecisionInput,
+  workspaceId: string,
   actorId?: string
 ): Promise<DecisionResult | null> {
-  const current = await getOpportunityById(id);
+  const current = await getOpportunityById(id, workspaceId);
   if (!current) {
     return null;
   }
 
-  const pendingApprovals = await countPendingApprovalsForOpportunity(id);
+  const pendingApprovals = await countPendingApprovalsForOpportunity(id, workspaceId);
   if (input.decisionType === "scale" && pendingApprovals > 0) {
     throw new DecisionError("Cannot scale while approvals are pending");
   }
@@ -265,6 +279,7 @@ export async function decideOpportunity(
 
   const updated = await updateOpportunityStageRecord({
     opportunityId: id,
+    workspaceId,
     nextStage: targetStage,
     status: targetStatus
   });
@@ -276,6 +291,7 @@ export async function decideOpportunity(
   if (input.decisionType === "scale") {
     const ventureId = await ensureVentureForOpportunity({
       opportunityId: id,
+      workspaceId,
       name: `${updated.title} Venture`,
       ...(actorId ? { ownerId: actorId } : {}),
       stage: "live",
@@ -317,12 +333,13 @@ export async function decideOpportunity(
 }
 
 export async function listOpportunityTimeline(
-  id: string
+  id: string,
+  workspaceId: string
 ): Promise<OpportunityTimelineItem[] | null> {
-  const current = await getOpportunityById(id);
+  const current = await getOpportunityById(id, workspaceId);
   if (!current) {
     return null;
   }
 
-  return listOpportunityTimelineRecords(id);
+  return listOpportunityTimelineRecords(id, workspaceId);
 }

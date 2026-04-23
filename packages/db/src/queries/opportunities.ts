@@ -20,5 +20,6 @@ export const listOpportunitiesSql = `
     created_at,
     updated_at
   FROM opportunities
+  WHERE workspace_id = $1
   ORDER BY overall_score DESC NULLS LAST, created_at DESC
 `;

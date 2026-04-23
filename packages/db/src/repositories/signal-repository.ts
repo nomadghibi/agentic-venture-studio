@@ -145,7 +145,10 @@ export type SignalWithLink = Signal & {
   isPrimaryEvidence: boolean;
 };
 
-export async function listSignalsForOpportunity(opportunityId: string): Promise<SignalWithLink[]> {
+export async function listSignalsForOpportunity(
+  opportunityId: string,
+  workspaceId: string
+): Promise<SignalWithLink[]> {
   const result = await db.query<SignalWithLinkRow>(
     `
       SELECT
@@ -161,10 +164,11 @@ export async function listSignalsForOpportunity(opportunityId: string): Promise<
         osl.is_primary_evidence
       FROM opportunity_signal_links osl
       JOIN signals s ON s.id = osl.signal_id
-      WHERE osl.opportunity_id = $1
+      JOIN opportunities o ON o.id = osl.opportunity_id
+      WHERE osl.opportunity_id = $1 AND o.workspace_id = $2
       ORDER BY osl.created_at DESC
     `,
-    [opportunityId]
+    [opportunityId, workspaceId]
   );
 
   return result.rows.map((row) => ({

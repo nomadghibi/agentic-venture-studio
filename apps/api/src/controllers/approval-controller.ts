@@ -20,7 +20,7 @@ export async function listOpportunityApprovals(
   reply: FastifyReply
 ) {
   const params = OpportunityIdParamsSchema.parse(request.params);
-  const data = await listApprovalsForOpportunityRecord(params.id);
+  const data = await listApprovalsForOpportunityRecord(params.id, request.auth.workspaceId);
 
   if (!data) {
     return reply.code(404).send({
@@ -42,7 +42,12 @@ export async function reviewApproval(
   const payload = ReviewApprovalRequestSchema.parse(request.body);
 
   try {
-    const data = await reviewApprovalRecord(params.id, payload, request.auth?.id);
+    const data = await reviewApprovalRecord(
+      params.id,
+      payload,
+      request.auth.workspaceId,
+      request.auth.id
+    );
     if (!data) {
       return reply.code(404).send({
         error: {

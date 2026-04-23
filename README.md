@@ -22,6 +22,9 @@ Production-minded TypeScript monorepo scaffold for the Agentic Venture Studio MV
    - `pnpm --filter @avs/db db:seed`
 5. Run dev services:
    - `pnpm dev`
+6. Open app:
+   - `http://localhost:3200`
+   - Sign in with `founder@agentic.local` / `FounderPass!2026`
 
 ## Common scripts
 - `pnpm dev` - run all workspace dev processes.
@@ -31,7 +34,13 @@ Production-minded TypeScript monorepo scaffold for the Agentic Venture Studio MV
 
 ## API base
 - Local API base URL: `http://localhost:4050/api/v1`
+- Web dev URL: `http://localhost:3200`
 - Health endpoint: `GET /health`
+- Auth endpoints:
+  - `POST /auth/register`
+  - `POST /auth/login`
+  - `GET /auth/me`
+  - `POST /auth/logout`
 
 ## Database
 - Initial SQL migration: `packages/db/migrations/0001_initial.sql`

@@ -1,6 +1,10 @@
 import type {
   Approval,
   ApprovalReviewInput,
+  AuthLoginInput,
+  AuthRegisterInput,
+  AuthSession,
+  CreateWorkspaceInput,
   DashboardSummary,
   Opportunity,
   OpportunityCreateInput,
@@ -9,13 +13,21 @@ import type {
   OpportunityStageTransitionInput,
   OpportunityTimelineItem,
   Venture,
-  UserRole
+  Workspace
 } from "@avs/types";
 
-const apiBaseUrl = process.env.API_BASE_URL ?? "http://localhost:4050/api/v1";
-const devUserId = process.env.DEV_USER_ID ?? "web-founder";
-const devUserRole = (process.env.DEV_USER_ROLE as UserRole | undefined) ?? "founder";
-const devUserEmail = process.env.DEV_USER_EMAIL ?? "founder@agentic.local";
+const browserDefaultApiBaseUrl =
+  typeof window === "undefined"
+    ? undefined
+    : `${window.location.protocol}//${window.location.hostname}:4050/api/v1`;
+
+const rawApiBaseUrl =
+  process.env.NEXT_PUBLIC_API_BASE_URL ??
+  process.env.API_BASE_URL ??
+  browserDefaultApiBaseUrl ??
+  "http://localhost:4050/api/v1";
+
+const apiBaseUrl = rawApiBaseUrl.replace(/\/+$/, "");
 
 class ApiError extends Error {
   statusCode: number;
@@ -27,30 +39,29 @@ class ApiError extends Error {
   }
 }
 
+type RequestMethod = "GET" | "POST" | "PATCH";
+
 type RequestOptions = {
-  method?: "GET" | "POST" | "PATCH";
+  method?: RequestMethod;
   body?: unknown;
 };
 
 type ApiEnvelope<T> = { data: T };
 type ApiErrorEnvelope = { error?: { message?: string } };
 
-function buildHeaders() {
-  return {
-    "content-type": "application/json",
-    "x-user-id": devUserId,
-    "x-user-role": devUserRole,
-    "x-user-email": devUserEmail
-  };
-}
-
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T | null> {
   try {
+    const hasBody = options.body !== undefined;
     const response = await fetch(`${apiBaseUrl}${path}`, {
       method: options.method ?? "GET",
       cache: "no-store",
-      headers: buildHeaders(),
-      ...(options.body ? { body: JSON.stringify(options.body) } : {})
+      credentials: "include",
+      ...(hasBody
+        ? {
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(options.body)
+          }
+        : {})
     });
 
     if (!response.ok) {
@@ -65,11 +76,17 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 }
 
 async function requestOrThrow<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const hasBody = options.body !== undefined;
   const response = await fetch(`${apiBaseUrl}${path}`, {
     method: options.method ?? "GET",
     cache: "no-store",
-    headers: buildHeaders(),
-    ...(options.body ? { body: JSON.stringify(options.body) } : {})
+    credentials: "include",
+    ...(hasBody
+      ? {
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(options.body)
+        }
+      : {})
   });
 
   if (!response.ok) {
@@ -91,24 +108,64 @@ async function requestOrThrow<T>(path: string, options: RequestOptions = {}): Pr
   return payload.data;
 }
 
+export async function register(input: AuthRegisterInput): Promise<AuthSession> {
+  return requestOrThrow<AuthSession>("/auth/register", {
+    method: "POST",
+    body: input
+  });
+}
+
+export async function login(input: AuthLoginInput): Promise<AuthSession> {
+  return requestOrThrow<AuthSession>("/auth/login", {
+    method: "POST",
+    body: input
+  });
+}
+
+export async function logout(): Promise<void> {
+  await requestOrThrow<{ ok: boolean }>("/auth/logout", {
+    method: "POST"
+  });
+}
+
+export async function fetchSession(): Promise<AuthSession | null> {
+  return request<AuthSession>("/auth/me");
+}
+
+export type WorkspaceOptionsResponse = {
+  workspaces: Workspace[];
+  currentWorkspaceId: string;
+};
+
+export async function fetchWorkspaceOptions(): Promise<WorkspaceOptionsResponse> {
+  return requestOrThrow<WorkspaceOptionsResponse>("/workspaces");
+}
+
+export type WorkspaceSelectionResponse = {
+  session: AuthSession;
+  workspaces: Workspace[];
+  currentWorkspaceId: string;
+};
+
+export async function createWorkspace(input: CreateWorkspaceInput): Promise<WorkspaceSelectionResponse> {
+  return requestOrThrow<WorkspaceSelectionResponse>("/workspaces", {
+    method: "POST",
+    body: input
+  });
+}
+
+export async function selectWorkspace(workspaceId: string): Promise<WorkspaceSelectionResponse> {
+  return requestOrThrow<WorkspaceSelectionResponse>(`/workspaces/${workspaceId}/select`, {
+    method: "POST"
+  });
+}
+
 export async function fetchDashboardSummary(): Promise<DashboardSummary> {
-  const data = await request<DashboardSummary>("/dashboard/summary");
-
-  if (!data) {
-    return {
-      activeOpportunities: 0,
-      awaitingApprovals: 0,
-      liveVentures: 0,
-      lowConfidenceRuns: 0
-    };
-  }
-
-  return data;
+  return requestOrThrow<DashboardSummary>("/dashboard/summary");
 }
 
 export async function fetchOpportunities(): Promise<Opportunity[]> {
-  const data = await request<Opportunity[]>("/opportunities");
-  return data ?? [];
+  return requestOrThrow<Opportunity[]>("/opportunities");
 }
 
 export async function createOpportunity(input: OpportunityCreateInput): Promise<Opportunity> {
@@ -179,13 +236,11 @@ export async function reviewApproval(id: string, input: ApprovalReviewInput): Pr
 }
 
 export async function fetchVentures(): Promise<Venture[]> {
-  const data = await request<Venture[]>("/ventures");
-  return data ?? [];
+  return requestOrThrow<Venture[]>("/ventures");
 }
 
 export async function fetchVenture(id: string): Promise<Venture | null> {
-  const data = await request<Venture>(`/ventures/${id}`);
-  return data ?? null;
+  return request<Venture>(`/ventures/${id}`);
 }
 
 export function getApiErrorMessage(error: unknown): string {
@@ -198,4 +253,12 @@ export function getApiErrorMessage(error: unknown): string {
   }
 
   return "Unknown API error";
+}
+
+export function getApiStatusCode(error: unknown): number | null {
+  if (error instanceof ApiError) {
+    return error.statusCode;
+  }
+
+  return null;
 }

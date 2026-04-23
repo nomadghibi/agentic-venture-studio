@@ -14,22 +14,24 @@ export class ApprovalReviewError extends Error {
 }
 
 export async function listApprovalsForOpportunity(
-  opportunityId: string
+  opportunityId: string,
+  workspaceId: string
 ): Promise<Approval[] | null> {
-  const existing = await getOpportunityById(opportunityId);
+  const existing = await getOpportunityById(opportunityId, workspaceId);
   if (!existing) {
     return null;
   }
 
-  return listApprovalsForOpportunityRecords(opportunityId);
+  return listApprovalsForOpportunityRecords(opportunityId, workspaceId);
 }
 
 export async function reviewApproval(
   approvalId: string,
   input: ApprovalReviewInput,
+  workspaceId: string,
   reviewerId?: string
 ): Promise<Approval | null> {
-  const existing = await getApprovalById(approvalId);
+  const existing = await getApprovalById(approvalId, workspaceId);
   if (!existing) {
     return null;
   }
@@ -38,5 +40,5 @@ export async function reviewApproval(
     throw new ApprovalReviewError("Only pending approvals can be reviewed");
   }
 
-  return reviewApprovalRecord(approvalId, input, reviewerId);
+  return reviewApprovalRecord(approvalId, input, workspaceId, reviewerId);
 }

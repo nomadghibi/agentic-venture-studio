@@ -1,8 +1,11 @@
+import { randomBytes, scryptSync } from "node:crypto";
 import { db } from "../client.js";
 
 const ids = {
   founder: "dev-founder",
   reviewer: "dev-product-lead",
+  founderWorkspace: "ws-dev-founder",
+  reviewerWorkspace: "ws-dev-product-lead",
   opportunityA: "11111111-1111-4111-8111-111111111111",
   opportunityB: "22222222-2222-4222-8222-222222222222",
   signalA: "33333333-3333-4333-8333-333333333333",
@@ -11,24 +14,75 @@ const ids = {
   runA: "66666666-6666-4666-8666-666666666666"
 } as const;
 
-async function seed() {
-  await db.query("BEGIN");
+function hashPassword(password: string): string {
+  const salt = randomBytes(16).toString("hex");
+  const derived = scryptSync(password, salt, 64).toString("hex");
+  return `${salt}:${derived}`;
+}
 
-  await db.query(
+async function seed() {
+  const founderPasswordHash = hashPassword("FounderPass!2026");
+  const reviewerPasswordHash = hashPassword("ReviewerPass!2026");
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+
+    await client.query(
     `
-      INSERT INTO users (id, name, email, role, status)
+      INSERT INTO users (id, name, email, role, status, password_hash)
       VALUES
-        ($1, 'Dev Founder', 'founder@agentic.local', 'founder', 'active'),
-        ($2, 'Dev Product Lead', 'product@agentic.local', 'product_lead', 'active')
-      ON CONFLICT (id) DO NOTHING
+        ($1, 'Dev Founder', 'founder@agentic.local', 'founder', 'active', $3),
+        ($2, 'Dev Product Lead', 'product@agentic.local', 'product_lead', 'active', $4)
+      ON CONFLICT (id) DO UPDATE SET
+        password_hash = COALESCE(users.password_hash, EXCLUDED.password_hash),
+        updated_at = NOW()
     `,
-    [ids.founder, ids.reviewer]
+    [ids.founder, ids.reviewer, founderPasswordHash, reviewerPasswordHash]
   );
 
-  await db.query(
+    await client.query(
+    `
+      INSERT INTO workspaces (id, name, slug, owner_user_id)
+      VALUES
+        ($1, 'Founder Validation Desk', 'founder-validation-desk', $3),
+        ($2, 'Product Review Desk', 'product-review-desk', $4)
+      ON CONFLICT (id) DO UPDATE SET
+        name = EXCLUDED.name,
+        slug = EXCLUDED.slug,
+        updated_at = NOW()
+    `,
+    [ids.founderWorkspace, ids.reviewerWorkspace, ids.founder, ids.reviewer]
+  );
+
+    await client.query(
+    `
+      INSERT INTO workspace_memberships (id, workspace_id, user_id, role)
+      VALUES
+        ('wm-dev-founder-owner', $1, $3, 'owner'),
+        ('wm-dev-reviewer-owner', $2, $4, 'owner')
+      ON CONFLICT (workspace_id, user_id) DO NOTHING
+    `,
+    [ids.founderWorkspace, ids.reviewerWorkspace, ids.founder, ids.reviewer]
+  );
+
+    await client.query(
+    `
+      UPDATE users
+      SET default_workspace_id = CASE
+        WHEN id = $1 THEN $3
+        WHEN id = $2 THEN $4
+        ELSE default_workspace_id
+      END
+      WHERE id IN ($1, $2)
+    `,
+    [ids.founder, ids.reviewer, ids.founderWorkspace, ids.reviewerWorkspace]
+  );
+
+    await client.query(
     `
       INSERT INTO opportunities (
         id,
+        workspace_id,
         title,
         problem_statement,
         target_buyer,
@@ -43,6 +97,7 @@ async function seed() {
       VALUES
         (
           $1,
+          $5,
           'AI Front Desk for HVAC',
           'HVAC businesses miss after-hours leads and lose revenue.',
           'HVAC business owner',
@@ -56,6 +111,7 @@ async function seed() {
         ),
         (
           $2,
+          $6,
           'Missed-call Recovery for Roofers',
           'Roofing contractors fail to follow up on inbound calls quickly.',
           'Roofing business owner',
@@ -68,14 +124,22 @@ async function seed() {
           $4
         )
       ON CONFLICT (id) DO UPDATE SET
+        workspace_id = EXCLUDED.workspace_id,
         overall_score = EXCLUDED.overall_score,
         current_stage = EXCLUDED.current_stage,
         updated_at = NOW()
     `,
-    [ids.opportunityA, ids.opportunityB, ids.founder, ids.reviewer]
+    [
+      ids.opportunityA,
+      ids.opportunityB,
+      ids.founder,
+      ids.reviewer,
+      ids.founderWorkspace,
+      ids.reviewerWorkspace
+    ]
   );
 
-  await db.query(
+    await client.query(
     `
       INSERT INTO signals (
         id,
@@ -98,7 +162,7 @@ async function seed() {
     [ids.signalA]
   );
 
-  await db.query(
+    await client.query(
     `
       INSERT INTO opportunity_signal_links (
         id,
@@ -113,7 +177,7 @@ async function seed() {
     ["77777777-7777-4777-8777-777777777777", ids.opportunityA, ids.signalA]
   );
 
-  await db.query(
+    await client.query(
     `
       INSERT INTO approvals (
         id,
@@ -129,10 +193,11 @@ async function seed() {
     [ids.approvalA, ids.opportunityA, ids.founder]
   );
 
-  await db.query(
+    await client.query(
     `
       INSERT INTO ventures (
         id,
+        workspace_id,
         opportunity_id,
         name,
         tagline,
@@ -143,6 +208,7 @@ async function seed() {
       )
       VALUES (
         $1,
+        $4,
         $2,
         'HVAC Front Desk AI',
         'Never miss a booked job',
@@ -151,12 +217,15 @@ async function seed() {
         'live',
         $3
       )
-      ON CONFLICT (id) DO NOTHING
+      ON CONFLICT (id) DO UPDATE SET
+        workspace_id = EXCLUDED.workspace_id,
+        stage = EXCLUDED.stage,
+        updated_at = NOW()
     `,
-    [ids.ventureA, ids.opportunityA, ids.founder]
+    [ids.ventureA, ids.opportunityA, ids.founder, ids.founderWorkspace]
   );
 
-  await db.query(
+    await client.query(
     `
       INSERT INTO agent_runs (
         id,
@@ -183,13 +252,19 @@ async function seed() {
     [ids.runA, ids.opportunityB]
   );
 
-  await db.query("COMMIT");
-  await db.end();
-  console.log("Seed complete.");
+    await client.query("COMMIT");
+    console.log("Seed complete.");
+    console.log("Founder login: founder@agentic.local / FounderPass!2026");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+    await db.end();
+  }
 }
 
 seed().catch((error) => {
-  void db.query("ROLLBACK").catch(() => undefined);
   console.error(error);
   process.exit(1);
 });

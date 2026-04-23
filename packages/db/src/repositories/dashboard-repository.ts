@@ -8,15 +8,40 @@ type DashboardSummaryRow = {
   low_confidence_runs: number | string;
 };
 
-export async function getDashboardSummary(): Promise<DashboardSummary> {
+export async function getDashboardSummary(workspaceId: string): Promise<DashboardSummary> {
   const result = await db.query<DashboardSummaryRow>(
     `
       SELECT
-        (SELECT COUNT(*) FROM opportunities WHERE status = 'active') AS active_opportunities,
-        (SELECT COUNT(*) FROM approvals WHERE status = 'pending') AS awaiting_approvals,
-        (SELECT COUNT(*) FROM ventures WHERE stage = 'live') AS live_ventures,
-        (SELECT COUNT(*) FROM agent_runs WHERE confidence_level = 'low') AS low_confidence_runs
-    `
+        (
+          SELECT COUNT(*)
+          FROM opportunities
+          WHERE status = 'active' AND workspace_id = $1
+        ) AS active_opportunities,
+        (
+          SELECT COUNT(*)
+          FROM approvals a
+          JOIN opportunities o ON o.id = a.entity_id
+          WHERE
+            a.entity_type = 'opportunity'
+            AND a.status = 'pending'
+            AND o.workspace_id = $1
+        ) AS awaiting_approvals,
+        (
+          SELECT COUNT(*)
+          FROM ventures
+          WHERE stage = 'live' AND workspace_id = $1
+        ) AS live_ventures,
+        (
+          SELECT COUNT(*)
+          FROM agent_runs ar
+          JOIN opportunities o ON o.id = ar.entity_id
+          WHERE
+            ar.entity_type = 'opportunity'
+            AND ar.confidence_level = 'low'
+            AND o.workspace_id = $1
+        ) AS low_confidence_runs
+    `,
+    [workspaceId]
   );
 
   const row = result.rows[0];

@@ -21,6 +21,7 @@ async function resolveExistingUserId(userId?: string): Promise<string | null> {
 
 type VentureInsert = {
   opportunityId: string;
+  workspaceId: string;
   name: string;
   ownerId?: string;
   stage?: string;
@@ -61,7 +62,7 @@ function mapVenture(row: VentureRow): Venture {
   };
 }
 
-export async function listVentures(): Promise<Venture[]> {
+export async function listVentures(workspaceId: string): Promise<Venture[]> {
   const result = await db.query<VentureRow>(
     `
       SELECT
@@ -78,14 +79,16 @@ export async function listVentures(): Promise<Venture[]> {
         created_at::text AS created_at,
         updated_at::text AS updated_at
       FROM ventures
+      WHERE workspace_id = $1
       ORDER BY updated_at DESC
-    `
+    `,
+    [workspaceId]
   );
 
   return result.rows.map((row) => mapVenture(row));
 }
 
-export async function getVentureById(id: string): Promise<Venture | null> {
+export async function getVentureById(id: string, workspaceId: string): Promise<Venture | null> {
   const result = await db.query<VentureRow>(
     `
       SELECT
@@ -102,10 +105,10 @@ export async function getVentureById(id: string): Promise<Venture | null> {
         created_at::text AS created_at,
         updated_at::text AS updated_at
       FROM ventures
-      WHERE id = $1
+      WHERE id = $1 AND workspace_id = $2
       LIMIT 1
     `,
-    [id]
+    [id, workspaceId]
   );
 
   const row = result.rows[0];
@@ -122,6 +125,7 @@ export async function ensureVentureForOpportunity(input: VentureInsert): Promise
     `
       INSERT INTO ventures (
         id,
+        workspace_id,
         opportunity_id,
         name,
         tagline,
@@ -138,17 +142,20 @@ export async function ensureVentureForOpportunity(input: VentureInsert): Promise
         $5,
         $6,
         $7,
-        $8
+        $8,
+        $9
       )
       ON CONFLICT (opportunity_id)
       DO UPDATE SET
         stage = EXCLUDED.stage,
         owner_id = COALESCE(EXCLUDED.owner_id, ventures.owner_id),
+        workspace_id = EXCLUDED.workspace_id,
         updated_at = NOW()
       RETURNING id
     `,
     [
       crypto.randomUUID(),
+      input.workspaceId,
       input.opportunityId,
       input.name,
       input.tagline ?? null,
