@@ -173,6 +173,50 @@ export async function updateUserPassword(userId: string, passwordHash: string): 
   );
 }
 
+export async function updateUserRole(userId: string, role: UserProfile["role"]): Promise<boolean> {
+  const result = await db.query(
+    `UPDATE users SET role = $2, updated_at = NOW() WHERE id = $1`,
+    [userId, role]
+  );
+  return Number(result.rowCount ?? 0) > 0;
+}
+
+type WorkspaceMemberRow = {
+  id: string;
+  name: string;
+  email: string;
+  role: UserProfile["role"];
+  workspace_role: string;
+};
+
+export type WorkspaceMember = UserProfile & { workspaceRole: string };
+
+export async function listUsersInWorkspace(workspaceId: string): Promise<WorkspaceMember[]> {
+  const result = await db.query<WorkspaceMemberRow>(
+    `
+      SELECT
+        u.id,
+        u.name,
+        u.email,
+        u.role,
+        wm.role AS workspace_role
+      FROM workspace_memberships wm
+      JOIN users u ON u.id = wm.user_id
+      WHERE wm.workspace_id = $1
+      ORDER BY wm.created_at ASC
+    `,
+    [workspaceId]
+  );
+
+  return result.rows.map((row: WorkspaceMemberRow) => ({
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    role: row.role,
+    workspaceRole: row.workspace_role
+  }));
+}
+
 export async function createSession(input: SessionInsert): Promise<{ token: string; expiresAt: string }> {
   const rawToken = randomBytes(32).toString("base64url");
   const tokenHash = hashSessionToken(rawToken);

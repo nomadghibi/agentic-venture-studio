@@ -195,6 +195,8 @@ export default function WorkspacePage() {
           <p>Discovery to decision workflow console</p>
           <p className="topbar-meta">
             Signed in as <strong>{session.user.name}</strong> ({session.user.email})
+            {" — "}
+            <span className="role-badge">{session.user.role}</span>
           </p>
         </div>
         <div className="topbar-actions">
@@ -216,18 +218,20 @@ export default function WorkspacePage() {
             </select>
           </label>
 
-          <form className="workspace-create" onSubmit={handleCreateWorkspace}>
-            <input
-              className="input"
-              placeholder="New workspace name"
-              value={newWorkspaceName}
-              onChange={(event) => setNewWorkspaceName(event.target.value)}
-              disabled={busy}
-            />
-            <button type="submit" className="btn btn-ghost" disabled={busy || !newWorkspaceName.trim()}>
-              Create
-            </button>
-          </form>
+          {(session.user.role === "founder" || session.user.role === "admin") ? (
+            <form className="workspace-create" onSubmit={handleCreateWorkspace}>
+              <input
+                className="input"
+                placeholder="New workspace name"
+                value={newWorkspaceName}
+                onChange={(event) => setNewWorkspaceName(event.target.value)}
+                disabled={busy}
+              />
+              <button type="submit" className="btn btn-ghost" disabled={busy || !newWorkspaceName.trim()}>
+                Create
+              </button>
+            </form>
+          ) : null}
 
           <a href="/ventures" className="btn btn-ghost">
             View Venture Portfolio
@@ -257,6 +261,7 @@ export default function WorkspacePage() {
       <WorkspaceMvpControl
         key={currentWorkspaceId}
         initialOpportunities={opportunities}
+        userRole={session.user.role}
       />
     </main>
   );

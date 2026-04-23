@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { registerAdminRoutes } from "./admin.js";
 import { registerApprovalRoutes } from "./approvals.js";
 import { registerAuthRoutes } from "./auth.js";
 import { registerDashboardRoutes } from "./dashboard.js";
@@ -17,4 +18,5 @@ export async function registerRoutes(app: FastifyInstance) {
   await registerApprovalRoutes(app);
   await registerSignalRoutes(app);
   await registerVentureRoutes(app);
+  await registerAdminRoutes(app);
 }

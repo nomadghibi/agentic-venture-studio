@@ -7,6 +7,7 @@ export * from "./entities/approval.js";
 export * from "./entities/opportunity.js";
 export * from "./entities/signal.js";
 export * from "./entities/venture.js";
+export * from "./api/admin.js";
 export * from "./api/auth.js";
 export * from "./api/dashboard.js";
 export * from "./api/approvals.js";

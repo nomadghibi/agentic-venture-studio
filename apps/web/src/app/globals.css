@@ -1116,3 +1116,71 @@ a {
   border-radius: 12px;
   color: #0f7a58;
 }
+
+.role-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: #e8f4fd;
+  color: #1a4a6b;
+  border: 1px solid #c0daf0;
+  text-transform: capitalize;
+  letter-spacing: 0.02em;
+}
+
+.role-notice {
+  font-size: 0.84rem;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.65rem 0.8rem;
+  background: #f7fafc;
+}
+
+.tl-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tl-title {
+  font-size: 0.9rem;
+}
+
+.tl-kind {
+  display: inline-block;
+  padding: 0.15rem 0.48rem;
+  border-radius: 999px;
+  font-size: 0.71rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.tl-kind-stage {
+  background: #e0eeff;
+  color: #1a4fa0;
+  border: 1px solid #b8d3f8;
+}
+
+.tl-kind-approval {
+  background: #fff2e6;
+  color: #a0480a;
+  border: 1px solid #f5c89a;
+}
+
+.tl-kind-decision {
+  background: #e6faf5;
+  color: #0a6648;
+  border: 1px solid #9ae0c8;
+}
+
+.tl-meta {
+  font-size: 0.82rem;
+  color: var(--accent);
+  font-weight: 600;
+}

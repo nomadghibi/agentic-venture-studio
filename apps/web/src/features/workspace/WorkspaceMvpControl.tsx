@@ -7,7 +7,8 @@ import {
   type OpportunityDecisionInput,
   type OpportunityStage,
   type OpportunityScoreInput,
-  type OpportunityTimelineItem
+  type OpportunityTimelineItem,
+  type UserRole
 } from "@avs/types";
 import {
   createOpportunity,
@@ -22,6 +23,7 @@ import {
 
 type WorkspaceMvpControlProps = {
   initialOpportunities: Opportunity[];
+  userRole: UserRole;
 };
 
 const opportunityStages: OpportunityStage[] = [
@@ -39,6 +41,26 @@ const opportunityStages: OpportunityStage[] = [
 
 const decisionOptions: OpportunityDecisionInput["decisionType"][] = ["hold", "scale", "kill"];
 
+// Mirror the role sets from apps/api/src/routes/opportunities.ts and approvals.ts
+const WRITE_ROLES = new Set<UserRole>([
+  "founder",
+  "product_lead",
+  "research_reviewer",
+  "technical_architect",
+  "admin"
+]);
+
+const DECISION_ROLES = new Set<UserRole>(["founder", "finance_reviewer", "admin"]);
+
+const APPROVAL_REVIEW_ROLES = new Set<UserRole>([
+  "founder",
+  "product_lead",
+  "research_reviewer",
+  "technical_architect",
+  "finance_reviewer",
+  "admin"
+]);
+
 function scoreStateFromOpportunity(opportunity: Opportunity): OpportunityScoreInput {
   return {
     painScore: opportunity.painScore,
@@ -52,6 +74,37 @@ function scoreStateFromOpportunity(opportunity: Opportunity): OpportunityScoreIn
   };
 }
 
+function timelineKindLabel(kind: OpportunityTimelineItem["kind"]): string {
+  if (kind === "stage_transition") return "Stage";
+  if (kind === "approval_requested") return "Approval";
+  return "Decision";
+}
+
+function timelineKindClass(kind: OpportunityTimelineItem["kind"]): string {
+  if (kind === "stage_transition") return "tl-kind-stage";
+  if (kind === "approval_requested") return "tl-kind-approval";
+  return "tl-kind-decision";
+}
+
+function formatMetadata(item: OpportunityTimelineItem): string | null {
+  const m = item.metadata;
+  if (!m) return null;
+
+  if (item.kind === "stage_transition" && m.stageFrom && m.stageTo) {
+    return `${String(m.stageFrom)} → ${String(m.stageTo)}`;
+  }
+
+  if (item.kind === "approval_requested" && m.approvalType) {
+    return String(m.approvalType).replace(/_/g, " ");
+  }
+
+  if (item.kind === "decision_recorded" && m.decisionType) {
+    return String(m.decisionType);
+  }
+
+  return null;
+}
+
 const defaultCreateInput = {
   title: "",
   problemStatement: "",
@@ -59,7 +112,11 @@ const defaultCreateInput = {
   industry: ""
 };
 
-export function WorkspaceMvpControl({ initialOpportunities }: WorkspaceMvpControlProps) {
+export function WorkspaceMvpControl({ initialOpportunities, userRole }: WorkspaceMvpControlProps) {
+  const canWrite = useMemo(() => WRITE_ROLES.has(userRole), [userRole]);
+  const canDecide = useMemo(() => DECISION_ROLES.has(userRole), [userRole]);
+  const canReviewApproval = useMemo(() => APPROVAL_REVIEW_ROLES.has(userRole), [userRole]);
+
   const [opportunities, setOpportunities] = useState<Opportunity[]>(initialOpportunities);
   const [selectedOpportunityId, setSelectedOpportunityId] = useState<string>(
     initialOpportunities[0]?.id ?? ""
@@ -215,14 +272,8 @@ export function WorkspaceMvpControl({ initialOpportunities }: WorkspaceMvpContro
   }
 
   function badgeClassForApprovalStatus(status: Approval["status"]): "good" | "pending" | "bad" {
-    if (status === "approved") {
-      return "good";
-    }
-
-    if (status === "rejected") {
-      return "bad";
-    }
-
+    if (status === "approved") return "good";
+    if (status === "rejected") return "bad";
     return "pending";
   }
 
@@ -247,9 +298,7 @@ export function WorkspaceMvpControl({ initialOpportunities }: WorkspaceMvpContro
 
   async function handleScoreOpportunity(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selectedOpportunityId) {
-      return;
-    }
+    if (!selectedOpportunityId) return;
 
     setActionBusy(true);
     setFeedback("");
@@ -269,9 +318,7 @@ export function WorkspaceMvpControl({ initialOpportunities }: WorkspaceMvpContro
 
   async function handleStageTransition(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selectedOpportunityId) {
-      return;
-    }
+    if (!selectedOpportunityId) return;
 
     setActionBusy(true);
     setFeedback("");
@@ -298,9 +345,7 @@ export function WorkspaceMvpControl({ initialOpportunities }: WorkspaceMvpContro
 
   async function handleDecision(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selectedOpportunityId) {
-      return;
-    }
+    if (!selectedOpportunityId) return;
 
     setActionBusy(true);
     setFeedback("");
@@ -313,10 +358,7 @@ export function WorkspaceMvpControl({ initialOpportunities }: WorkspaceMvpContro
         refreshTimeline(selectedOpportunityId),
         refreshApprovals(selectedOpportunityId)
       ]);
-      setDecisionInput({
-        decisionType: decisionInput.decisionType,
-        reason: ""
-      });
+      setDecisionInput({ decisionType: decisionInput.decisionType, reason: "" });
       setFeedback(`Decision recorded (${decisionInput.decisionType}).`);
     } catch (decisionError) {
       setError(getApiErrorMessage(decisionError));
@@ -325,13 +367,8 @@ export function WorkspaceMvpControl({ initialOpportunities }: WorkspaceMvpContro
     }
   }
 
-  async function handleReviewApproval(
-    approvalId: string,
-    status: "approved" | "rejected"
-  ) {
-    if (!selectedOpportunityId) {
-      return;
-    }
+  async function handleReviewApproval(approvalId: string, status: "approved" | "rejected") {
+    if (!selectedOpportunityId) return;
 
     setActionBusy(true);
     setFeedback("");
@@ -348,10 +385,7 @@ export function WorkspaceMvpControl({ initialOpportunities }: WorkspaceMvpContro
         refreshTimeline(selectedOpportunityId),
         refreshApprovals(selectedOpportunityId)
       ]);
-      setReviewNotesByApprovalId((previous) => ({
-        ...previous,
-        [approvalId]: ""
-      }));
+      setReviewNotesByApprovalId((previous) => ({ ...previous, [approvalId]: "" }));
       setFeedback(`Approval ${status}.`);
     } catch (reviewError) {
       setError(getApiErrorMessage(reviewError));
@@ -408,202 +442,201 @@ export function WorkspaceMvpControl({ initialOpportunities }: WorkspaceMvpContro
         {feedback ? <p className="status-line success">{feedback}</p> : null}
         {error ? <p className="status-line error">{error}</p> : null}
 
-        <form className="stack" onSubmit={handleCreateOpportunity}>
-          <h3>Create Opportunity</h3>
-          <div className="form-grid">
-            <label className="field">
-              <span>Title</span>
-              <input
-                className="input"
-                value={createInput.title}
-                onChange={(event) =>
-                  setCreateInput((previous) => ({
-                    ...previous,
-                    title: event.target.value
-                  }))
-                }
-                required
-              />
-            </label>
-            <label className="field">
-              <span>Target Buyer</span>
-              <input
-                className="input"
-                value={createInput.targetBuyer}
-                onChange={(event) =>
-                  setCreateInput((previous) => ({
-                    ...previous,
-                    targetBuyer: event.target.value
-                  }))
-                }
-                required
-              />
-            </label>
-            <label className="field">
-              <span>Industry</span>
-              <input
-                className="input"
-                value={createInput.industry}
-                onChange={(event) =>
-                  setCreateInput((previous) => ({
-                    ...previous,
-                    industry: event.target.value
-                  }))
-                }
-                required
-              />
-            </label>
-            <label className="field field-span">
-              <span>Problem Statement</span>
-              <textarea
-                className="textarea"
-                value={createInput.problemStatement}
-                onChange={(event) =>
-                  setCreateInput((previous) => ({
-                    ...previous,
-                    problemStatement: event.target.value
-                  }))
-                }
-                required
-              />
-            </label>
-          </div>
-          <div className="button-row">
-            <button className="btn btn-primary" type="submit" disabled={actionBusy}>
-              Create Opportunity
-            </button>
-          </div>
-        </form>
+        {canWrite ? (
+          <>
+            <form className="stack" onSubmit={handleCreateOpportunity}>
+              <h3>Create Opportunity</h3>
+              <div className="form-grid">
+                <label className="field">
+                  <span>Title</span>
+                  <input
+                    className="input"
+                    value={createInput.title}
+                    onChange={(event) =>
+                      setCreateInput((previous) => ({ ...previous, title: event.target.value }))
+                    }
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>Target Buyer</span>
+                  <input
+                    className="input"
+                    value={createInput.targetBuyer}
+                    onChange={(event) =>
+                      setCreateInput((previous) => ({
+                        ...previous,
+                        targetBuyer: event.target.value
+                      }))
+                    }
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span>Industry</span>
+                  <input
+                    className="input"
+                    value={createInput.industry}
+                    onChange={(event) =>
+                      setCreateInput((previous) => ({
+                        ...previous,
+                        industry: event.target.value
+                      }))
+                    }
+                    required
+                  />
+                </label>
+                <label className="field field-span">
+                  <span>Problem Statement</span>
+                  <textarea
+                    className="textarea"
+                    value={createInput.problemStatement}
+                    onChange={(event) =>
+                      setCreateInput((previous) => ({
+                        ...previous,
+                        problemStatement: event.target.value
+                      }))
+                    }
+                    required
+                  />
+                </label>
+              </div>
+              <div className="button-row">
+                <button className="btn btn-primary" type="submit" disabled={actionBusy}>
+                  Create Opportunity
+                </button>
+              </div>
+            </form>
 
-        <form className="stack" onSubmit={handleScoreOpportunity}>
-          <h3>Update Scores</h3>
-          <div className="form-grid">
-            {Object.entries(scoreInput).map(([key, value]) => (
-              <label className="field" key={key}>
-                <span>{key}</span>
-                <input
-                  className="input"
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={1}
-                  value={value}
+            <form className="stack" onSubmit={handleScoreOpportunity}>
+              <h3>Update Scores</h3>
+              <div className="form-grid">
+                {Object.entries(scoreInput).map(([key, value]) => (
+                  <label className="field" key={key}>
+                    <span>{key}</span>
+                    <input
+                      className="input"
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={value}
+                      onChange={(event) =>
+                        setScoreInput((previous) => ({
+                          ...previous,
+                          [key]: Number(event.target.value)
+                        }))
+                      }
+                      required
+                    />
+                  </label>
+                ))}
+              </div>
+              <div className="button-row">
+                <button
+                  className="btn btn-primary"
+                  type="submit"
+                  disabled={actionBusy || !selectedOpportunityId}
+                >
+                  Apply Scores
+                </button>
+              </div>
+            </form>
+
+            <form className="stack" onSubmit={handleStageTransition}>
+              <h3>Advance Stage</h3>
+              <div className="form-grid">
+                <label className="field">
+                  <span>Next Stage</span>
+                  <select
+                    className="select"
+                    value={stageInput.nextStage}
+                    onChange={(event) =>
+                      setStageInput((previous) => ({
+                        ...previous,
+                        nextStage: event.target.value as OpportunityStage
+                      }))
+                    }
+                  >
+                    {opportunityStages.map((stage) => (
+                      <option key={stage} value={stage}>
+                        {stage}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field field-span">
+                  <span>Transition Note (optional)</span>
+                  <textarea
+                    className="textarea"
+                    value={stageInput.note}
+                    onChange={(event) =>
+                      setStageInput((previous) => ({ ...previous, note: event.target.value }))
+                    }
+                  />
+                </label>
+              </div>
+              <div className="button-row">
+                <button
+                  className="btn btn-primary"
+                  type="submit"
+                  disabled={actionBusy || !selectedOpportunityId}
+                >
+                  Move Stage
+                </button>
+              </div>
+            </form>
+          </>
+        ) : (
+          <p className="role-notice">Your role ({userRole}) has read-only access to opportunities.</p>
+        )}
+
+        {canDecide ? (
+          <form className="stack" onSubmit={handleDecision}>
+            <h3>Record Decision</h3>
+            <div className="form-grid">
+              <label className="field">
+                <span>Decision</span>
+                <select
+                  className="select"
+                  value={decisionInput.decisionType}
                   onChange={(event) =>
-                    setScoreInput((previous) => ({
+                    setDecisionInput((previous) => ({
                       ...previous,
-                      [key]: Number(event.target.value)
+                      decisionType: event.target.value as OpportunityDecisionInput["decisionType"]
                     }))
+                  }
+                >
+                  {decisionOptions.map((decision) => (
+                    <option key={decision} value={decision}>
+                      {decision}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field field-span">
+                <span>Decision Reason</span>
+                <textarea
+                  className="textarea"
+                  value={decisionInput.reason}
+                  onChange={(event) =>
+                    setDecisionInput((previous) => ({ ...previous, reason: event.target.value }))
                   }
                   required
                 />
               </label>
-            ))}
-          </div>
-          <div className="button-row">
-            <button
-              className="btn btn-primary"
-              type="submit"
-              disabled={actionBusy || !selectedOpportunityId}
-            >
-              Apply Scores
-            </button>
-          </div>
-        </form>
-
-        <form className="stack" onSubmit={handleStageTransition}>
-          <h3>Advance Stage</h3>
-          <div className="form-grid">
-            <label className="field">
-              <span>Next Stage</span>
-              <select
-                className="select"
-                value={stageInput.nextStage}
-                onChange={(event) =>
-                  setStageInput((previous) => ({
-                    ...previous,
-                    nextStage: event.target.value as OpportunityStage
-                  }))
-                }
+            </div>
+            <div className="button-row">
+              <button
+                className="btn btn-primary"
+                type="submit"
+                disabled={actionBusy || !selectedOpportunityId}
               >
-                {opportunityStages.map((stage) => (
-                  <option key={stage} value={stage}>
-                    {stage}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field field-span">
-              <span>Transition Note (optional)</span>
-              <textarea
-                className="textarea"
-                value={stageInput.note}
-                onChange={(event) =>
-                  setStageInput((previous) => ({
-                    ...previous,
-                    note: event.target.value
-                  }))
-                }
-              />
-            </label>
-          </div>
-          <div className="button-row">
-            <button
-              className="btn btn-primary"
-              type="submit"
-              disabled={actionBusy || !selectedOpportunityId}
-            >
-              Move Stage
-            </button>
-          </div>
-        </form>
-
-        <form className="stack" onSubmit={handleDecision}>
-          <h3>Record Decision</h3>
-          <div className="form-grid">
-            <label className="field">
-              <span>Decision</span>
-              <select
-                className="select"
-                value={decisionInput.decisionType}
-                onChange={(event) =>
-                  setDecisionInput((previous) => ({
-                    ...previous,
-                    decisionType: event.target.value as OpportunityDecisionInput["decisionType"]
-                  }))
-                }
-              >
-                {decisionOptions.map((decision) => (
-                  <option key={decision} value={decision}>
-                    {decision}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field field-span">
-              <span>Decision Reason</span>
-              <textarea
-                className="textarea"
-                value={decisionInput.reason}
-                onChange={(event) =>
-                  setDecisionInput((previous) => ({
-                    ...previous,
-                    reason: event.target.value
-                  }))
-                }
-                required
-              />
-            </label>
-          </div>
-          <div className="button-row">
-            <button
-              className="btn btn-primary"
-              type="submit"
-              disabled={actionBusy || !selectedOpportunityId}
-            >
-              Save Decision
-            </button>
-          </div>
-        </form>
+                Save Decision
+              </button>
+            </div>
+          </form>
+        ) : null}
       </article>
 
       <article className="panel">
@@ -613,7 +646,10 @@ export function WorkspaceMvpControl({ initialOpportunities }: WorkspaceMvpContro
         {selectedOpportunityId && !approvalsLoading && approvals.length === 0 ? (
           <p>No approvals requested yet for this opportunity.</p>
         ) : null}
-        {selectedOpportunityId && !approvalsLoading && pendingApprovals.length === 0 && approvals.length > 0 ? (
+        {selectedOpportunityId &&
+        !approvalsLoading &&
+        pendingApprovals.length === 0 &&
+        approvals.length > 0 ? (
           <p>All approvals for this opportunity have been reviewed.</p>
         ) : null}
         <div className="timeline-list">
@@ -631,7 +667,7 @@ export function WorkspaceMvpControl({ initialOpportunities }: WorkspaceMvpContro
               ) : (
                 <small>Awaiting reviewer action.</small>
               )}
-              {approval.status === "pending" ? (
+              {approval.status === "pending" && canReviewApproval ? (
                 <div className="stack">
                   <label className="field">
                     <span>Review Notes (optional)</span>
@@ -666,7 +702,9 @@ export function WorkspaceMvpControl({ initialOpportunities }: WorkspaceMvpContro
                   </div>
                 </div>
               ) : null}
-              {approval.status !== "pending" && approval.reviewNotes ? <p>{approval.reviewNotes}</p> : null}
+              {approval.status !== "pending" && approval.reviewNotes ? (
+                <p>{approval.reviewNotes}</p>
+              ) : null}
             </div>
           ))}
         </div>
@@ -674,18 +712,28 @@ export function WorkspaceMvpControl({ initialOpportunities }: WorkspaceMvpContro
 
       <article className="panel">
         <h2>Opportunity Timeline</h2>
-        {timelineLoading ? <p>Loading timeline…</p> : null}
-        {!timelineLoading && timeline.length === 0 ? (
+        {!selectedOpportunityId ? <p>Select an opportunity to see its history.</p> : null}
+        {selectedOpportunityId && timelineLoading ? <p>Loading timeline…</p> : null}
+        {selectedOpportunityId && !timelineLoading && timeline.length === 0 ? (
           <p>No timeline events yet for this opportunity.</p>
         ) : null}
         <div className="timeline-list">
-          {timeline.map((item) => (
-            <div className="timeline-item" key={item.id}>
-              <strong>{item.title}</strong>
-              <p>{item.description}</p>
-              <small>{new Date(item.createdAt).toLocaleString()}</small>
-            </div>
-          ))}
+          {timeline.map((item) => {
+            const meta = formatMetadata(item);
+            return (
+              <div className="timeline-item" key={item.id}>
+                <div className="tl-head">
+                  <span className={`tl-kind ${timelineKindClass(item.kind)}`}>
+                    {timelineKindLabel(item.kind)}
+                  </span>
+                  <strong className="tl-title">{item.title}</strong>
+                </div>
+                <p>{item.description}</p>
+                {meta ? <p className="tl-meta">{meta}</p> : null}
+                <small>{new Date(item.createdAt).toLocaleString()}</small>
+              </div>
+            );
+          })}
         </div>
       </article>
     </section>
