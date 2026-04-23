@@ -1,4 +1,5 @@
 import cors from "@fastify/cors";
+import rateLimit from "@fastify/rate-limit";
 import Fastify from "fastify";
 import { env } from "./config/env.js";
 import { registerRoutes } from "./routes/index.js";
@@ -39,6 +40,20 @@ export function buildApp() {
       callback(new Error("Origin not allowed by CORS"), false);
     },
     credentials: true
+  });
+
+  app.register(rateLimit, {
+    global: true,
+    max: 200,
+    timeWindow: "1 minute",
+    errorResponseBuilder(_request, context) {
+      return {
+        error: {
+          code: "rate_limit_exceeded",
+          message: `Too many requests. Please wait ${Math.ceil(context.ttl / 1000)} seconds before retrying.`
+        }
+      };
+    }
   });
 
   app.register(registerRoutes, { prefix: "/api/v1" });

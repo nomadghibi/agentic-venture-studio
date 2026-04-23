@@ -6,12 +6,14 @@ import type {
   AuthSession,
   CreateWorkspaceInput,
   DashboardSummary,
+  ForgotPasswordInput,
   Opportunity,
   OpportunityCreateInput,
   OpportunityDecisionInput,
   OpportunityScoreInput,
   OpportunityStageTransitionInput,
   OpportunityTimelineItem,
+  ResetPasswordInput,
   Venture,
   Workspace
 } from "@avs/types";
@@ -125,6 +127,20 @@ export async function login(input: AuthLoginInput): Promise<AuthSession> {
 export async function logout(): Promise<void> {
   await requestOrThrow<{ ok: boolean }>("/auth/logout", {
     method: "POST"
+  });
+}
+
+export async function forgotPassword(input: ForgotPasswordInput): Promise<void> {
+  await requestOrThrow<{ ok: boolean }>("/auth/forgot-password", {
+    method: "POST",
+    body: input
+  });
+}
+
+export async function resetPassword(input: ResetPasswordInput): Promise<void> {
+  await requestOrThrow<{ ok: boolean }>("/auth/reset-password", {
+    method: "POST",
+    body: input
   });
 }
 

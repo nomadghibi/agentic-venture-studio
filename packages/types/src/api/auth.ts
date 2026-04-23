@@ -19,6 +19,17 @@ export const AuthSessionSchema = z.object({
   workspace: WorkspaceSchema
 });
 
+export const ForgotPasswordInputSchema = z.object({
+  email: z.string().email()
+});
+
+export const ResetPasswordInputSchema = z.object({
+  token: z.string().min(1),
+  password: z.string().min(8)
+});
+
 export type AuthLoginInput = z.infer<typeof AuthLoginInputSchema>;
 export type AuthRegisterInput = z.infer<typeof AuthRegisterInputSchema>;
 export type AuthSession = z.infer<typeof AuthSessionSchema>;
+export type ForgotPasswordInput = z.infer<typeof ForgotPasswordInputSchema>;
+export type ResetPasswordInput = z.infer<typeof ResetPasswordInputSchema>;

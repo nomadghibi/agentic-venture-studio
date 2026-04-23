@@ -2,12 +2,20 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import {
   AuthConflictError,
   AuthCredentialsError,
+  ResetTokenError,
+  forgotPassword,
   loginFounder,
   logoutSession,
   readSession,
-  registerFounder
+  registerFounder,
+  resetPassword
 } from "../services/auth-service.js";
-import { AuthLoginInputSchema, AuthRegisterInputSchema } from "@avs/types";
+import {
+  AuthLoginInputSchema,
+  AuthRegisterInputSchema,
+  ForgotPasswordInputSchema,
+  ResetPasswordInputSchema
+} from "@avs/types";
 import { clearSessionCookie, serializeSessionCookie } from "../utils/session-cookie.js";
 import { env } from "../config/env.js";
 
@@ -102,9 +110,31 @@ export async function logout(request: FastifyRequest, reply: FastifyReply) {
   await logoutSession(request.auth.sessionToken);
   clearCookie(reply);
 
-  return reply.send({
-    data: {
-      ok: true
+  return reply.send({ data: { ok: true } });
+}
+
+export async function forgotPasswordHandler(request: FastifyRequest, reply: FastifyReply) {
+  const payload = ForgotPasswordInputSchema.parse(request.body);
+
+  await forgotPassword(payload.email, env.WEB_URL, env.PASSWORD_RESET_TTL_MINUTES);
+
+  // Always 200 regardless of whether email exists (prevents user enumeration).
+  return reply.send({ data: { ok: true } });
+}
+
+export async function resetPasswordHandler(request: FastifyRequest, reply: FastifyReply) {
+  const payload = ResetPasswordInputSchema.parse(request.body);
+
+  try {
+    await resetPassword(payload.token, payload.password);
+    return reply.send({ data: { ok: true } });
+  } catch (error) {
+    if (error instanceof ResetTokenError) {
+      return reply.code(400).send({
+        error: { code: "invalid_reset_token", message: error.message }
+      });
     }
-  });
+
+    throw error;
+  }
 }

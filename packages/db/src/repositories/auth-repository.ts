@@ -1,4 +1,4 @@
-import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import type { AuthSession, UserProfile, Workspace } from "@avs/types";
 import { db } from "../client.js";
 
@@ -12,7 +12,7 @@ type UserRow = {
 };
 
 type SessionRow = {
-  token: string;
+  token_hash: string;
   user_id: string;
   user_name: string;
   user_email: string;
@@ -41,6 +41,10 @@ export type AuthSessionRecord = AuthSession & {
   sessionToken: string;
 };
 
+function hashSessionToken(raw: string): string {
+  return createHash("sha256").update(raw).digest("hex");
+}
+
 function mapUserRow(row: UserRow): UserWithPassword {
   return {
     user: {
@@ -54,7 +58,7 @@ function mapUserRow(row: UserRow): UserWithPassword {
   };
 }
 
-function mapSessionRow(row: SessionRow): AuthSessionRecord {
+function mapSessionRow(row: SessionRow, rawToken: string): AuthSessionRecord {
   const workspace: Workspace = {
     id: row.workspace_id,
     name: row.workspace_name,
@@ -65,7 +69,7 @@ function mapSessionRow(row: SessionRow): AuthSessionRecord {
   };
 
   return {
-    sessionToken: row.token,
+    sessionToken: rawToken,
     user: {
       id: row.user_id,
       name: row.user_name,
@@ -162,37 +166,38 @@ export async function createUser(input: {
   return mapUserRow(row).user;
 }
 
+export async function updateUserPassword(userId: string, passwordHash: string): Promise<void> {
+  await db.query(
+    `UPDATE users SET password_hash = $2 WHERE id = $1`,
+    [userId, passwordHash]
+  );
+}
+
 export async function createSession(input: SessionInsert): Promise<{ token: string; expiresAt: string }> {
-  const token = randomBytes(32).toString("base64url");
+  const rawToken = randomBytes(32).toString("base64url");
+  const tokenHash = hashSessionToken(rawToken);
   const expiresAt = new Date(Date.now() + input.ttlDays * 24 * 60 * 60 * 1000);
 
   await db.query(
     `
-      INSERT INTO user_sessions (
-        token,
-        user_id,
-        workspace_id,
-        expires_at
-      )
+      INSERT INTO user_sessions (token_hash, user_id, workspace_id, expires_at)
       VALUES ($1, $2, $3, $4)
     `,
-    [token, input.userId, input.workspaceId, expiresAt.toISOString()]
+    [tokenHash, input.userId, input.workspaceId, expiresAt.toISOString()]
   );
 
-  return {
-    token,
-    expiresAt: expiresAt.toISOString()
-  };
+  return { token: rawToken, expiresAt: expiresAt.toISOString() };
 }
 
-export async function deleteSession(token: string): Promise<void> {
+export async function deleteSession(rawToken: string): Promise<void> {
   await db.query(
-    `
-      DELETE FROM user_sessions
-      WHERE token = $1
-    `,
-    [token]
+    `DELETE FROM user_sessions WHERE token_hash = $1`,
+    [hashSessionToken(rawToken)]
   );
+}
+
+export async function deleteAllUserSessions(userId: string): Promise<void> {
+  await db.query(`DELETE FROM user_sessions WHERE user_id = $1`, [userId]);
 }
 
 export async function updateSessionWorkspace(input: {
@@ -200,29 +205,28 @@ export async function updateSessionWorkspace(input: {
   userId: string;
   workspaceId: string;
 }): Promise<boolean> {
-  const result = await db.query<{ token: string }>(
+  const result = await db.query(
     `
       UPDATE user_sessions us
       SET workspace_id = $3
       FROM workspace_memberships wm
       WHERE
-        us.token = $1
+        us.token_hash = $1
         AND us.user_id = $2
         AND wm.workspace_id = $3
         AND wm.user_id = $2
-      RETURNING us.token
     `,
-    [input.token, input.userId, input.workspaceId]
+    [hashSessionToken(input.token), input.userId, input.workspaceId]
   );
 
   return Number(result.rowCount ?? 0) > 0;
 }
 
-export async function getSessionByToken(token: string): Promise<AuthSessionRecord | null> {
+export async function getSessionByToken(rawToken: string): Promise<AuthSessionRecord | null> {
   const result = await db.query<SessionRow>(
     `
       SELECT
-        us.token,
+        us.token_hash,
         u.id AS user_id,
         u.name AS user_name,
         u.email AS user_email,
@@ -238,12 +242,12 @@ export async function getSessionByToken(token: string): Promise<AuthSessionRecor
       JOIN workspace_memberships wm ON wm.workspace_id = us.workspace_id AND wm.user_id = u.id
       JOIN workspaces w ON w.id = us.workspace_id
       WHERE
-        us.token = $1
+        us.token_hash = $1
         AND us.expires_at > NOW()
         AND u.status = 'active'
       LIMIT 1
     `,
-    [token]
+    [hashSessionToken(rawToken)]
   );
 
   const row = result.rows[0];
@@ -251,5 +255,5 @@ export async function getSessionByToken(token: string): Promise<AuthSessionRecor
     return null;
   }
 
-  return mapSessionRow(row);
+  return mapSessionRow(row, rawToken);
 }

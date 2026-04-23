@@ -2,6 +2,7 @@ export * from "./client.js";
 export * from "./schema/tables.js";
 export * from "./queries/opportunities.js";
 export * from "./repositories/auth-repository.js";
+export * from "./repositories/password-reset-repository.js";
 export * from "./repositories/approval-repository.js";
 export * from "./repositories/dashboard-repository.js";
 export * from "./repositories/opportunity-repository.js";

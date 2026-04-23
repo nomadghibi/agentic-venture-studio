@@ -21,7 +21,13 @@ const EnvSchema = z.object({
   WEB_URL: z.string().url().default("http://localhost:3200"),
   DATABASE_URL: z.string().min(1),
   SESSION_COOKIE_NAME: z.string().default("avs_session"),
-  SESSION_TTL_DAYS: z.coerce.number().int().positive().default(30)
+  SESSION_TTL_DAYS: z.coerce.number().int().positive().default(30),
+  PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().positive().default(60),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().default(587),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().default("noreply@agentic.local")
 });
 
 export const env = EnvSchema.parse(process.env);
