@@ -1,12 +1,13 @@
 import type { NextConfig } from "next";
-import path from "node:path";
-
-const isDocker = process.env.DOCKER_BUILD === "true";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  ...(isDocker
-    ? { output: "standalone", outputFileTracingRoot: path.join(process.cwd(), "../../") }
+  ...(process.env.DOCKER_BUILD === "true"
+    ? {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        output: "standalone" as const,
+        outputFileTracingRoot: require("path").join(process.cwd(), "../../")
+      }
     : {})
 };
 
