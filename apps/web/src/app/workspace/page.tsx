@@ -125,6 +125,11 @@ export default function WorkspacePage() {
           <Link href="/ventures" className="btn btn-ghost">
             View Venture Portfolio
           </Link>
+          {session.user.role === "admin" ? (
+            <Link href="/workspace/admin" className="btn btn-ghost">
+              Team & Roles
+            </Link>
+          ) : null}
           <button
             type="button"
             className="btn btn-ghost"

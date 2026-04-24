@@ -163,12 +163,17 @@ export default function VenturesPage() {
                   {venture.businessModel ?? "Not specified"}
                 </p>
                 <p>
-                  <strong>Opportunity ID:</strong> {venture.opportunityId}
-                </p>
-                <p>
                   <strong>Updated:</strong>{" "}
                   {new Date(venture.updatedAt).toLocaleString()}
                 </p>
+              </div>
+              <div style={{ marginTop: 12 }}>
+                <Link
+                  href={`/ventures/${venture.id}`}
+                  className="btn btn-ghost btn-sm"
+                >
+                  View Venture →
+                </Link>
               </div>
             </article>
           ))}

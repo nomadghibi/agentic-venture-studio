@@ -2,6 +2,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import {
   AuthConflictError,
   AuthCredentialsError,
+  AuthInviteCodeError,
   ResetTokenError,
   forgotPassword,
   loginFounder,
@@ -52,16 +53,19 @@ export async function register(request: FastifyRequest, reply: FastifyReply) {
   const payload = AuthRegisterInputSchema.parse(request.body);
 
   try {
-    const result = await registerFounder(payload, env.SESSION_TTL_DAYS);
+    const result = await registerFounder(payload, env.SESSION_TTL_DAYS, env.BETA_INVITE_CODE);
     setSessionCookie(reply, result.token);
     return reply.code(201).send({ data: publicSession(result.session) });
   } catch (error) {
+    if (error instanceof AuthInviteCodeError) {
+      return reply.code(403).send({
+        error: { code: "invalid_invite_code", message: error.message }
+      });
+    }
+
     if (error instanceof AuthConflictError) {
       return reply.code(409).send({
-        error: {
-          code: "email_conflict",
-          message: error.message
-        }
+        error: { code: "email_conflict", message: error.message }
       });
     }
 

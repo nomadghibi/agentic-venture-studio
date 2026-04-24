@@ -1,0 +1,61 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: avs
+      POSTGRES_PASSWORD: avs
+      POSTGRES_DB: agentic_venture_studio
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U avs -d agentic_venture_studio"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4050
+      DATABASE_URL: postgresql://avs:avs@db:5432/agentic_venture_studio
+      WEB_URL: ${WEB_URL:-http://localhost:3200}
+      SESSION_COOKIE_NAME: avs_session
+      SESSION_TTL_DAYS: 30
+      PASSWORD_RESET_TTL_MINUTES: 60
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-noreply@agentic.local}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-opus-4-7}
+      BETA_INVITE_CODE: ${BETA_INVITE_CODE:-}
+    ports:
+      - "4050:4050"
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:4050/api/v1}
+      SESSION_COOKIE_NAME: avs_session
+    ports:
+      - "3200:3200"
+
+volumes:
+  db_data:

@@ -106,6 +106,17 @@ function formatMetadata(item: OpportunityTimelineItem): string | null {
   return null;
 }
 
+const SCORE_LABELS: Record<string, string> = {
+  painScore: "Pain Intensity",
+  frequencyScore: "Frequency",
+  buyerClarityScore: "Buyer Clarity",
+  willingnessToPayScore: "Willingness to Pay",
+  feasibilityScore: "Feasibility",
+  distributionScore: "Distribution",
+  strategicFitScore: "Strategic Fit",
+  portfolioValueScore: "Portfolio Value"
+};
+
 const defaultCreateInput = {
   title: "",
   problemStatement: "",
@@ -524,7 +535,7 @@ export function WorkspaceMvpControl({ initialOpportunities, userRole }: Workspac
               <div className="form-grid">
                 {Object.entries(scoreInput).map(([key, value]) => (
                   <label className="field" key={key}>
-                    <span>{key}</span>
+                    <span>{SCORE_LABELS[key] ?? key}</span>
                     <input
                       className="input"
                       type="number"

@@ -21,4 +21,9 @@ if (!connectionString) {
   throw new Error("DATABASE_URL must be set for @avs/db");
 }
 
-export const db = new Pool({ connectionString });
+const isProduction = process.env.NODE_ENV === "production";
+
+export const db = new Pool({
+  connectionString,
+  ssl: isProduction ? { rejectUnauthorized: false } : false
+});

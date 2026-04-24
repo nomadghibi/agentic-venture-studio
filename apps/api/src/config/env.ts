@@ -30,7 +30,8 @@ const EnvSchema = z
     SMTP_PASS: z.string().optional(),
     SMTP_FROM: z.string().default("noreply@agentic.local"),
     ANTHROPIC_API_KEY: z.string().min(1),
-    ANTHROPIC_MODEL: z.string().default("claude-opus-4-7")
+    ANTHROPIC_MODEL: z.string().default("claude-opus-4-7"),
+    BETA_INVITE_CODE: z.string().optional()
   })
   .refine(
     (data) => !data.SMTP_HOST || (data.SMTP_USER && data.SMTP_PASS),

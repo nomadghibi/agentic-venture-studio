@@ -1,6 +1,8 @@
 import type {
   Approval,
   ApprovalReviewInput,
+  ArchitectureContent,
+  MonetizationContent,
   AuthLoginInput,
   AuthRegisterInput,
   AuthSession,
@@ -291,12 +293,65 @@ export async function ingestSignal(input: IngestSignalInput): Promise<Signal> {
   return result;
 }
 
+export type ArchitectureArtifact = {
+  id: string;
+  version: number;
+  createdAt: string;
+  content: ArchitectureContent;
+};
+
+export async function fetchArchitecture(opportunityId: string): Promise<ArchitectureArtifact | null> {
+  return request<ArchitectureArtifact>(`/opportunities/${opportunityId}/architecture`);
+}
+
+export async function generateArchitecture(opportunityId: string): Promise<{ queued: boolean }> {
+  return requestOrThrow<{ queued: boolean }>(`/opportunities/${opportunityId}/architecture`, {
+    method: "POST"
+  });
+}
+
 export async function fetchVentures(): Promise<Venture[]> {
   return requestOrThrow<Venture[]>("/ventures");
 }
 
 export async function fetchVenture(id: string): Promise<Venture | null> {
   return request<Venture>(`/ventures/${id}`);
+}
+
+export type MonetizationArtifact = {
+  id: string;
+  version: number;
+  createdAt: string;
+  content: MonetizationContent;
+};
+
+export async function fetchMonetization(opportunityId: string): Promise<MonetizationArtifact | null> {
+  return request<MonetizationArtifact>(`/opportunities/${opportunityId}/monetization`);
+}
+
+export async function generateMonetizationPlan(opportunityId: string): Promise<{ queued: boolean }> {
+  return requestOrThrow<{ queued: boolean }>(`/opportunities/${opportunityId}/monetization`, {
+    method: "POST"
+  });
+}
+
+export type WorkspaceMember = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  workspaceRole: string;
+};
+
+export async function fetchWorkspaceMembers(): Promise<WorkspaceMember[]> {
+  return requestOrThrow<WorkspaceMember[]>("/admin/users");
+}
+
+export async function updateMemberRole(userId: string, role: string): Promise<void> {
+  await requestOrThrow<{ ok: boolean }>(`/admin/users/${userId}/role`, {
+    method: "PATCH",
+    body: { role }
+  });
 }
 
 export function getApiErrorMessage(error: unknown): string {

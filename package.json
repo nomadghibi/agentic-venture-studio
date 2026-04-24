@@ -5,7 +5,8 @@
   "packageManager": "pnpm@10.7.1",
   "scripts": {
     "dev": "turbo run dev --parallel",
-    "build": "turbo run build",
+    "build": "pnpm --filter @avs/types build && pnpm --filter @avs/db build && pnpm --filter @avs/agents build && pnpm --filter @avs/api build",
+    "start": "node apps/api/dist/server.js",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",

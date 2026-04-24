@@ -9,7 +9,11 @@ import {
   transitionOpportunityStage,
   listOpportunities
 } from "../controllers/opportunity-controller.js";
-import { generatePrd, getPrd } from "../controllers/prd-controller.js";
+import {
+  generatePrd, getPrd,
+  generateArchitecture, getArchitecture,
+  generateMonetization, getMonetization
+} from "../controllers/prd-controller.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
 const opportunityWriteRoles: UserRole[] = [
@@ -56,4 +60,16 @@ export async function registerOpportunityRoutes(app: FastifyInstance) {
     generatePrd
   );
   app.get("/opportunities/:id/prd", { preHandler: [requireAuth] }, getPrd);
+  app.post(
+    "/opportunities/:id/architecture",
+    { preHandler: [requireAuth, requireRole(opportunityWriteRoles)] },
+    generateArchitecture
+  );
+  app.get("/opportunities/:id/architecture", { preHandler: [requireAuth] }, getArchitecture);
+  app.post(
+    "/opportunities/:id/monetization",
+    { preHandler: [requireAuth, requireRole(opportunityWriteRoles)] },
+    generateMonetization
+  );
+  app.get("/opportunities/:id/monetization", { preHandler: [requireAuth] }, getMonetization);
 }

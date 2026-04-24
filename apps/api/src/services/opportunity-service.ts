@@ -27,6 +27,8 @@ import {
   statusForStage
 } from "./opportunity-logic.js";
 import { runValidationWorkflow } from "../workflows/validation-workflow.js";
+import { runFeasibilityWorkflow } from "../workflows/feasibility-workflow.js";
+import { runMonetizationWorkflow } from "../workflows/monetization-workflow.js";
 
 export { StageTransitionError };
 
@@ -150,6 +152,18 @@ export async function transitionOpportunityStage(
   if (input.nextStage === "validation") {
     void runValidationWorkflow({ opportunityId: id, workspaceId }).catch((err: unknown) => {
       console.error("[validation-workflow] error for opportunity", id, err);
+    });
+  }
+
+  if (input.nextStage === "feasibility") {
+    void runFeasibilityWorkflow({ opportunityId: id, workspaceId }).catch((err: unknown) => {
+      console.error("[feasibility-workflow] error for opportunity", id, err);
+    });
+  }
+
+  if (input.nextStage === "monetization") {
+    void runMonetizationWorkflow({ opportunityId: id, workspaceId }).catch((err: unknown) => {
+      console.error("[monetization-workflow] error for opportunity", id, err);
     });
   }
 

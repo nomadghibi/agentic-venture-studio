@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import type { Opportunity, OpportunityTimelineItem, PrdContent, Signal } from "@avs/types";
+import type { Opportunity, OpportunityTimelineItem, PrdContent, Signal, MonetizationContent } from "@avs/types";
+import type { ArchitectureContent } from "@avs/types";
 import { useAuth } from "@/hooks/useAuth";
 import {
   fetchOpportunity,
@@ -11,11 +12,17 @@ import {
   fetchOpportunitySignals,
   fetchPrd,
   generatePrd,
+  fetchArchitecture,
+  generateArchitecture,
+  fetchMonetization,
+  generateMonetizationPlan,
   getApiErrorMessage,
-  type PrdArtifact
+  type PrdArtifact,
+  type ArchitectureArtifact,
+  type MonetizationArtifact
 } from "@/services/api";
 
-type Tab = "overview" | "prd" | "signals" | "timeline";
+type Tab = "overview" | "prd" | "architecture" | "monetization" | "signals" | "timeline";
 
 const SCORE_LABELS: Record<string, string> = {
   painScore: "Pain Intensity",
@@ -81,7 +88,7 @@ function PrdView({
         ) : null}
       </div>
 
-      {busy && !prd ? <p>Generating PRD… this takes 20–40 seconds.</p> : null}
+      {busy ? <p>Generating PRD… polling for results (20–40 seconds).</p> : null}
 
       {!c && !busy ? (
         <article className="panel">
@@ -160,6 +167,210 @@ function PrdView({
   );
 }
 
+function ArchView({
+  arch,
+  onRegenerate,
+  busy,
+  canWrite
+}: {
+  arch: ArchitectureArtifact | null;
+  onRegenerate: () => void;
+  busy: boolean;
+  canWrite: boolean;
+}) {
+  const c: ArchitectureContent | null = arch?.content ?? null;
+
+  return (
+    <div className="stack">
+      <div className="topbar-actions" style={{ justifyContent: "flex-start" }}>
+        {canWrite ? (
+          <button
+            className="btn btn-primary"
+            type="button"
+            onClick={onRegenerate}
+            disabled={busy}
+          >
+            {arch ? "Regenerate Architecture" : "Generate Architecture"}
+          </button>
+        ) : null}
+        {arch ? (
+          <small className="muted">
+            Version {arch.version} · {new Date(arch.createdAt).toLocaleString()}
+          </small>
+        ) : null}
+      </div>
+
+      {busy ? <p>Generating architecture… polling for results (20–40 seconds).</p> : null}
+
+      {!c && !busy ? (
+        <article className="panel">
+          <p>No architecture generated yet. Click "Generate Architecture" to create one using Claude.</p>
+        </article>
+      ) : null}
+
+      {c ? (
+        <div className="prd-doc stack">
+          <article className="panel">
+            <h3>System Overview</h3>
+            <p>{c.systemOverview}</p>
+          </article>
+
+          <div className="grid-2">
+            <article className="panel">
+              <h3>Tech Stack</h3>
+              <div className="feature-list">
+                {c.techStack.map((t) => (
+                  <div className="feature-item" key={t.layer}>
+                    <div className="feature-head">
+                      <strong>{t.layer}</strong>
+                      <span className="badge">{t.technology}</span>
+                    </div>
+                    <p>{t.rationale}</p>
+                  </div>
+                ))}
+              </div>
+            </article>
+            <article className="panel">
+              <h3>Data Model</h3>
+              <div className="feature-list">
+                {c.dataModel.map((d) => (
+                  <div className="feature-item" key={d.entity}>
+                    <strong>{d.entity}</strong>
+                    {d.keyFields ? <small className="muted">Fields: {d.keyFields}</small> : null}
+                    {d.relationships ? <p>{d.relationships}</p> : null}
+                  </div>
+                ))}
+              </div>
+            </article>
+          </div>
+
+          <article className="panel">
+            <h3>API Surface</h3>
+            <div className="feature-list">
+              {c.apiSurface.map((a) => (
+                <div className="feature-item" key={`${a.method}-${a.path}`}>
+                  <div className="feature-head">
+                    <strong>{a.method} {a.path}</strong>
+                  </div>
+                  <p>{a.purpose}</p>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <div className="grid-2">
+            <article className="panel">
+              <h3>Deployment Approach</h3>
+              <p>{c.deploymentApproach}</p>
+            </article>
+            <article className="panel">
+              <h3>Estimated Build Time</h3>
+              <p>{c.estimatedBuildTime}</p>
+            </article>
+          </div>
+
+          <article className="panel">
+            <h3>Build Order</h3>
+            <ol className="prd-list">
+              {c.buildOrder.map((step) => <li key={step}>{step}</li>)}
+            </ol>
+          </article>
+
+          {c.technicalRisks.length > 0 ? (
+            <article className="panel">
+              <h3>Technical Risks</h3>
+              <ul className="prd-list">
+                {c.technicalRisks.map((r) => <li key={r}>{r}</li>)}
+              </ul>
+            </article>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function MonetizationView({
+  mono,
+  onRegenerate,
+  busy,
+  canWrite
+}: {
+  mono: MonetizationArtifact | null;
+  onRegenerate: () => void;
+  busy: boolean;
+  canWrite: boolean;
+}) {
+  const c: MonetizationContent | null = mono?.content ?? null;
+
+  return (
+    <div className="stack">
+      <div className="topbar-actions" style={{ justifyContent: "flex-start" }}>
+        {canWrite ? (
+          <button className="btn btn-primary" type="button" onClick={onRegenerate} disabled={busy}>
+            {mono ? "Regenerate Strategy" : "Generate Monetization Strategy"}
+          </button>
+        ) : null}
+        {mono ? (
+          <small className="muted">
+            Version {mono.version} · {new Date(mono.createdAt).toLocaleString()}
+          </small>
+        ) : null}
+      </div>
+
+      {busy ? <p>Generating monetization strategy… polling for results (20–40 seconds).</p> : null}
+
+      {!c && !busy ? (
+        <article className="panel">
+          <p>No monetization strategy yet. Click "Generate Monetization Strategy" or advance the opportunity to the monetization stage.</p>
+        </article>
+      ) : null}
+
+      {c ? (
+        <div className="prd-doc stack">
+          <div className="grid-2">
+            <article className="panel">
+              <h3>Primary Model</h3>
+              <p><span className="badge good">{c.primaryModel.replace(/_/g, " ")}</span></p>
+              <p style={{ marginTop: 8 }}><strong>{c.suggestedPrice}</strong></p>
+              <p style={{ marginTop: 4 }}>{c.pricingRationale}</p>
+            </article>
+            <article className="panel">
+              <h3>Year 1 Revenue Estimate</h3>
+              <p>{c.year1RevenueEstimate}</p>
+              <h3 style={{ marginTop: 16 }}>Revenue Lead Indicator</h3>
+              <p>{c.revenueLeadIndicator}</p>
+            </article>
+          </div>
+
+          <article className="panel">
+            <h3>Next Step to Validate</h3>
+            <p>{c.recommendation}</p>
+          </article>
+
+          <div className="grid-2">
+            <article className="panel">
+              <h3>Alternative Models</h3>
+              <ul className="prd-list">
+                {c.alternativeModels.map((m) => <li key={m}>{m}</li>)}
+              </ul>
+            </article>
+            <article className="panel">
+              <h3>Anti-Patterns to Avoid</h3>
+              <ul className="prd-list">
+                {c.antiPatterns.map((a) => <li key={a}>{a}</li>)}
+              </ul>
+            </article>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+const POLL_INTERVAL_MS = 5_000;
+const POLL_MAX_ATTEMPTS = 18; // 90 seconds
+
 export default function OpportunityDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -171,11 +382,21 @@ export default function OpportunityDetailPage() {
   const [prd, setPrd] = useState<PrdArtifact | null>(null);
   const [prdLoading, setPrdLoading] = useState(false);
   const [prdBusy, setPrdBusy] = useState(false);
+  const [arch, setArch] = useState<ArchitectureArtifact | null>(null);
+  const [archLoading, setArchLoading] = useState(false);
+  const [archBusy, setArchBusy] = useState(false);
+  const [mono, setMono] = useState<MonetizationArtifact | null>(null);
+  const [monoLoading, setMonoLoading] = useState(false);
+  const [monoBusy, setMonoBusy] = useState(false);
   const [signals, setSignals] = useState<Signal[]>([]);
   const [timeline, setTimeline] = useState<OpportunityTimelineItem[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState("");
   const [feedback, setFeedback] = useState("");
+
+  const prdPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const archPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const monoPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (!session || !id) return;
@@ -206,9 +427,39 @@ export default function OpportunityDetailPage() {
     }
   }, [id]);
 
+  const loadArch = useCallback(async () => {
+    if (!id) return;
+    setArchLoading(true);
+    try {
+      const data = await fetchArchitecture(id);
+      setArch(data);
+    } finally {
+      setArchLoading(false);
+    }
+  }, [id]);
+
+  const loadMono = useCallback(async () => {
+    if (!id) return;
+    setMonoLoading(true);
+    try {
+      const data = await fetchMonetization(id);
+      setMono(data);
+    } finally {
+      setMonoLoading(false);
+    }
+  }, [id]);
+
   useEffect(() => {
     if (tab === "prd" && session) void loadPrd();
   }, [tab, session, loadPrd]);
+
+  useEffect(() => {
+    if (tab === "architecture" && session) void loadArch();
+  }, [tab, session, loadArch]);
+
+  useEffect(() => {
+    if (tab === "monetization" && session) void loadMono();
+  }, [tab, session, loadMono]);
 
   useEffect(() => {
     if (tab !== "signals" || !session || !id) return;
@@ -228,17 +479,107 @@ export default function OpportunityDetailPage() {
     return () => { cancelled = true; };
   }, [tab, session, id]);
 
+  useEffect(() => {
+    return () => {
+      if (prdPollRef.current) clearInterval(prdPollRef.current);
+      if (archPollRef.current) clearInterval(archPollRef.current);
+      if (monoPollRef.current) clearInterval(monoPollRef.current);
+    };
+  }, []);
+
+  function startPrdPolling() {
+    if (prdPollRef.current) clearInterval(prdPollRef.current);
+    let attempts = 0;
+    prdPollRef.current = setInterval(async () => {
+      attempts++;
+      const data = await fetchPrd(id).catch(() => null);
+      if (data) {
+        setPrd(data);
+        setPrdBusy(false);
+        if (prdPollRef.current) clearInterval(prdPollRef.current);
+        setFeedback("PRD generated successfully.");
+      } else if (attempts >= POLL_MAX_ATTEMPTS) {
+        setPrdBusy(false);
+        if (prdPollRef.current) clearInterval(prdPollRef.current);
+        setFeedback("PRD is taking longer than expected — refresh the page to check.");
+      }
+    }, POLL_INTERVAL_MS);
+  }
+
+  function startArchPolling() {
+    if (archPollRef.current) clearInterval(archPollRef.current);
+    let attempts = 0;
+    archPollRef.current = setInterval(async () => {
+      attempts++;
+      const data = await fetchArchitecture(id).catch(() => null);
+      if (data) {
+        setArch(data);
+        setArchBusy(false);
+        if (archPollRef.current) clearInterval(archPollRef.current);
+        setFeedback("Architecture generated successfully.");
+      } else if (attempts >= POLL_MAX_ATTEMPTS) {
+        setArchBusy(false);
+        if (archPollRef.current) clearInterval(archPollRef.current);
+        setFeedback("Architecture is taking longer than expected — refresh the page to check.");
+      }
+    }, POLL_INTERVAL_MS);
+  }
+
   async function handleGeneratePrd() {
     setPrdBusy(true);
     setFeedback("");
     setError("");
     try {
       await generatePrd(id);
-      setFeedback("PRD generation started — results appear in 20–40 seconds. Refresh to check.");
+      startPrdPolling();
     } catch (err) {
-      setError(getApiErrorMessage(err));
-    } finally {
       setPrdBusy(false);
+      setError(getApiErrorMessage(err));
+    }
+  }
+
+  async function handleGenerateArchitecture() {
+    setArchBusy(true);
+    setFeedback("");
+    setError("");
+    try {
+      await generateArchitecture(id);
+      startArchPolling();
+    } catch (err) {
+      setArchBusy(false);
+      setError(getApiErrorMessage(err));
+    }
+  }
+
+  function startMonoPolling() {
+    if (monoPollRef.current) clearInterval(monoPollRef.current);
+    let attempts = 0;
+    monoPollRef.current = setInterval(async () => {
+      attempts++;
+      const data = await fetchMonetization(id).catch(() => null);
+      if (data) {
+        setMono(data);
+        setMonoBusy(false);
+        if (monoPollRef.current) clearInterval(monoPollRef.current);
+        setFeedback("Monetization strategy generated successfully.");
+      } else if (attempts >= POLL_MAX_ATTEMPTS) {
+        setMonoBusy(false);
+        if (monoPollRef.current) clearInterval(monoPollRef.current);
+        setFeedback("Monetization strategy is taking longer than expected — refresh to check.");
+      }
+    }, POLL_INTERVAL_MS);
+  }
+
+  async function handleGenerateMonetization() {
+    setMonoBusy(true);
+    setFeedback("");
+    setError("");
+    try {
+      await generateMonetizationPlan(id);
+      startMonoPolling();
+    } catch (err) {
+      setMonoBusy(false);
+      setError(getApiErrorMessage(err));
     }
   }
 
@@ -298,7 +639,7 @@ export default function OpportunityDetailPage() {
       {error ? <p className="status-line error">{error}</p> : null}
 
       <nav className="tab-nav">
-        {(["overview", "prd", "signals", "timeline"] as Tab[]).map((t) => (
+        {(["overview", "prd", "architecture", "monetization", "signals", "timeline"] as Tab[]).map((t) => (
           <button
             key={t}
             type="button"
@@ -342,6 +683,32 @@ export default function OpportunityDetailPage() {
             prd={prd}
             onRegenerate={handleGeneratePrd}
             busy={prdBusy}
+            canWrite={canWrite}
+          />
+        )
+      ) : null}
+
+      {tab === "architecture" ? (
+        archLoading ? (
+          <article className="panel"><p>Loading architecture…</p></article>
+        ) : (
+          <ArchView
+            arch={arch}
+            onRegenerate={handleGenerateArchitecture}
+            busy={archBusy}
+            canWrite={canWrite}
+          />
+        )
+      ) : null}
+
+      {tab === "monetization" ? (
+        monoLoading ? (
+          <article className="panel"><p>Loading monetization strategy…</p></article>
+        ) : (
+          <MonetizationView
+            mono={mono}
+            onRegenerate={handleGenerateMonetization}
+            busy={monoBusy}
             canWrite={canWrite}
           />
         )

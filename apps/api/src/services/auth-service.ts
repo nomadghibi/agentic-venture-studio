@@ -26,6 +26,13 @@ export class AuthConflictError extends Error {
   }
 }
 
+export class AuthInviteCodeError extends Error {
+  constructor() {
+    super("A valid invite code is required to create an account");
+    this.name = "AuthInviteCodeError";
+  }
+}
+
 export class AuthCredentialsError extends Error {
   constructor(message: string) {
     super(message);
@@ -33,7 +40,15 @@ export class AuthCredentialsError extends Error {
   }
 }
 
-export async function registerFounder(input: AuthRegisterInput, sessionTtlDays: number) {
+export async function registerFounder(
+  input: AuthRegisterInput,
+  sessionTtlDays: number,
+  betaInviteCode?: string
+) {
+  if (betaInviteCode && input.inviteCode !== betaInviteCode) {
+    throw new AuthInviteCodeError();
+  }
+
   const existing = await findUserByEmail(input.email);
   if (existing) {
     throw new AuthConflictError("An account with this email already exists");

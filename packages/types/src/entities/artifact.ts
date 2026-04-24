@@ -31,3 +31,51 @@ export const ArtifactSchema = z.object({
 export type PrdFeature = z.infer<typeof PrdFeatureSchema>;
 export type PrdContent = z.infer<typeof PrdContentSchema>;
 export type Artifact = z.infer<typeof ArtifactSchema>;
+
+export const ArchTechStackItemSchema = z.object({
+  layer: z.string(),
+  technology: z.string(),
+  rationale: z.string()
+});
+
+export const ArchDataModelItemSchema = z.object({
+  entity: z.string(),
+  keyFields: z.string(),
+  relationships: z.string()
+});
+
+export const ArchApiRouteSchema = z.object({
+  method: z.string(),
+  path: z.string(),
+  purpose: z.string()
+});
+
+export const ArchitectureContentSchema = z.object({
+  systemOverview: z.string(),
+  techStack: z.array(ArchTechStackItemSchema),
+  dataModel: z.array(ArchDataModelItemSchema),
+  apiSurface: z.array(ArchApiRouteSchema),
+  deploymentApproach: z.string(),
+  buildOrder: z.array(z.string()),
+  estimatedBuildTime: z.string(),
+  technicalRisks: z.array(z.string())
+});
+
+export type ArchTechStackItem = z.infer<typeof ArchTechStackItemSchema>;
+export type ArchDataModelItem = z.infer<typeof ArchDataModelItemSchema>;
+export type ArchApiRoute = z.infer<typeof ArchApiRouteSchema>;
+export type ArchitectureContent = z.infer<typeof ArchitectureContentSchema>;
+
+export const MonetizationContentSchema = z.object({
+  primaryModel: z.enum(["subscription", "usage_based", "one_time", "marketplace", "freemium", "enterprise_license"]),
+  suggestedPrice: z.string(),
+  pricingRationale: z.string(),
+  revenueLeadIndicator: z.string(),
+  alternativeModels: z.array(z.string()),
+  antiPatterns: z.array(z.string()),
+  year1RevenueEstimate: z.string(),
+  confidence: z.number(),
+  recommendation: z.string()
+});
+
+export type MonetizationContent = z.infer<typeof MonetizationContentSchema>;

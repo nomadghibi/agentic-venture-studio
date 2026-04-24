@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/apps/api/src/server.js",
+    "start": "node dist/server.js",
     "lint": "echo \"No lint config wired yet\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"

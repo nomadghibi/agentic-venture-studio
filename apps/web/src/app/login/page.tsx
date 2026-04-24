@@ -20,13 +20,14 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  const [loginEmail, setLoginEmail] = useState("founder@agentic.local");
-  const [loginPassword, setLoginPassword] = useState("FounderPass!2026");
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
 
   const [registerName, setRegisterName] = useState("");
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
   const [registerWorkspaceName, setRegisterWorkspaceName] = useState("");
+  const [registerInviteCode, setRegisterInviteCode] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -78,9 +79,8 @@ export default function LoginPage() {
         name: registerName,
         email: registerEmail,
         password: registerPassword,
-        ...(registerWorkspaceName.trim()
-          ? { workspaceName: registerWorkspaceName.trim() }
-          : {})
+        ...(registerWorkspaceName.trim() ? { workspaceName: registerWorkspaceName.trim() } : {}),
+        ...(registerInviteCode.trim() ? { inviteCode: registerInviteCode.trim() } : {})
       });
 
       router.replace(nextPath);
@@ -88,6 +88,8 @@ export default function LoginPage() {
       const statusCode = getApiStatusCode(registerError);
       if (statusCode === 409) {
         setError("That email is already in use. Try signing in instead.");
+      } else if (statusCode === 403) {
+        setError("Invalid invite code. Contact the team for beta access.");
       } else {
         setError(getApiErrorMessage(registerError));
       }
@@ -212,6 +214,17 @@ export default function LoginPage() {
                 disabled={busy}
               />
             </label>
+            <label className="field">
+              <span>Invite code</span>
+              <input
+                type="text"
+                className="input"
+                value={registerInviteCode}
+                onChange={(event) => setRegisterInviteCode(event.target.value)}
+                disabled={busy}
+                autoComplete="off"
+              />
+            </label>
             <button type="submit" className="btn btn-primary" disabled={busy}>
               {busy ? "Creating Account..." : "Create Account"}
             </button>
@@ -221,9 +234,7 @@ export default function LoginPage() {
         {error ? <p className="status-line error">{error}</p> : null}
 
         <footer className="auth-footnote">
-          <small>
-            Demo credentials: <strong>founder@agentic.local</strong> / <strong>FounderPass!2026</strong>
-          </small>
+          <small>Beta access requires an invite code. <a href="mailto:hello@agentic.studio">Request access →</a></small>
         </footer>
       </section>
     </main>
