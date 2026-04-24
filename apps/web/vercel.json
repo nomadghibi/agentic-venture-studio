@@ -1,0 +1,11 @@
+{
+  "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
+  "buildCommand": "cd ../.. && pnpm --filter @avs/types build && pnpm --filter @avs/web build",
+  "outputDirectory": ".next",
+  "rewrites": [
+    {
+      "source": "/api/v1/:path*",
+      "destination": "https://your-render-api.onrender.com/api/v1/:path*"
+    }
+  ]
+}
