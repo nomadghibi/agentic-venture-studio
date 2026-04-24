@@ -20,13 +20,14 @@ import {
   updateOpportunityScores as updateOpportunityScoresRecord,
   updateOpportunityStage as updateOpportunityStageRecord
 } from "@avs/db";
+import {
+  StageTransitionError,
+  approvalTypeForStage,
+  assertAllowedStageTransition,
+  statusForStage
+} from "./opportunity-logic.js";
 
-export class StageTransitionError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "StageTransitionError";
-  }
-}
+export { StageTransitionError };
 
 export class DecisionError extends Error {
   constructor(message: string) {
@@ -35,86 +36,12 @@ export class DecisionError extends Error {
   }
 }
 
-const linearFlow: OpportunityStage[] = [
-  "discovery",
-  "validation",
-  "feasibility",
-  "monetization",
-  "design",
-  "build",
-  "launch",
-  "live"
-];
-
-const stageOrder = new Map<OpportunityStage, number>(
-  linearFlow.map((stage, index) => [stage, index])
-);
-
-function statusForStage(stage: OpportunityStage): Opportunity["status"] {
-  if (stage === "live") {
-    return "approved";
-  }
-
-  if (stage === "killed") {
-    return "rejected";
-  }
-
-  if (stage === "archived") {
-    return "archived";
-  }
-
-  return "active";
-}
-
-function assertAllowedStageTransition(from: OpportunityStage, to: OpportunityStage) {
-  if (from === to) {
-    throw new StageTransitionError("Stage is already set to the requested value");
-  }
-
-  if (to === "killed") {
-    if (from === "archived") {
-      throw new StageTransitionError("Archived opportunities cannot be killed");
-    }
-
-    return;
-  }
-
-  if (to === "archived") {
-    if (from !== "killed" && from !== "live") {
-      throw new StageTransitionError("Only killed or live opportunities can be archived");
-    }
-
-    return;
-  }
-
-  const fromIndex = stageOrder.get(from);
-  const toIndex = stageOrder.get(to);
-
-  if (fromIndex == null || toIndex == null || toIndex !== fromIndex + 1) {
-    throw new StageTransitionError(
-      `Invalid stage progression from "${from}" to "${to}"`
-    );
-  }
-}
-
-function approvalTypeForStage(stage: OpportunityStage): string | null {
-  if (stage === "design") {
-    return "design_review";
-  }
-
-  if (stage === "build") {
-    return "build_approval";
-  }
-
-  if (stage === "launch") {
-    return "launch_approval";
-  }
-
-  return null;
-}
-
-export async function listOpportunities(workspaceId: string): Promise<Opportunity[]> {
-  return listOpportunityRecords(workspaceId);
+export async function listOpportunities(
+  workspaceId: string,
+  limit?: number,
+  offset?: number
+): Promise<Opportunity[]> {
+  return listOpportunityRecords(workspaceId, limit, offset);
 }
 
 export async function getOpportunity(
@@ -161,6 +88,7 @@ export async function scoreOpportunity(
 
   await createWorkflowEvent({
     opportunityId: id,
+    workspaceId,
     eventType: "opportunity_scored",
     ...(actorId ? { triggeredBy: actorId } : {}),
     payload: {
@@ -210,6 +138,7 @@ export async function transitionOpportunityStage(
 
   await createWorkflowEvent({
     opportunityId: id,
+    workspaceId,
     eventType: "opportunity_stage_transition",
     ...(actorId ? { triggeredBy: actorId } : {}),
     stageFrom: current.currentStage,
@@ -262,6 +191,7 @@ export async function decideOpportunity(
 
   const decisionId = await createDecisionRecord({
     opportunityId: id,
+    workspaceId,
     decisionType: input.decisionType,
     reason: input.reason,
     ...(actorId ? { decidedBy: actorId } : {})
@@ -302,6 +232,7 @@ export async function decideOpportunity(
 
     await createWorkflowEvent({
       opportunityId: id,
+      workspaceId,
       eventType: "opportunity_scaled_to_venture",
       ...(actorId ? { triggeredBy: actorId } : {}),
       payload: { ventureId }
@@ -311,6 +242,7 @@ export async function decideOpportunity(
   if (targetStage !== current.currentStage) {
     await createWorkflowEvent({
       opportunityId: id,
+      workspaceId,
       eventType: "opportunity_stage_transition",
       ...(actorId ? { triggeredBy: actorId } : {}),
       stageFrom: current.currentStage,
@@ -321,6 +253,7 @@ export async function decideOpportunity(
 
   await createWorkflowEvent({
     opportunityId: id,
+    workspaceId,
     eventType: "opportunity_decision_recorded",
     ...(actorId ? { triggeredBy: actorId } : {}),
     payload: { decisionType: input.decisionType }

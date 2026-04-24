@@ -22,8 +22,14 @@ const OpportunityIdParamsSchema = z.object({
   id: z.string().uuid()
 });
 
+const PaginationQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(200).optional().default(50),
+  offset: z.coerce.number().int().min(0).optional().default(0)
+});
+
 export async function listOpportunities(request: FastifyRequest, reply: FastifyReply) {
-  const data = await listOpportunityRecords(request.auth.workspaceId);
+  const { limit, offset } = PaginationQuerySchema.parse(request.query);
+  const data = await listOpportunityRecords(request.auth.workspaceId, limit, offset);
   return reply.send({ data });
 }
 

@@ -80,7 +80,7 @@ export async function listWorkspacesForUser(userId: string): Promise<Workspace[]
     [userId]
   );
 
-  return result.rows.map((row) => mapWorkspace(row));
+  return result.rows.map((row: WorkspaceRow) => mapWorkspace(row));
 }
 
 export async function getWorkspaceForUser(

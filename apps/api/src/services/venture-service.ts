@@ -4,8 +4,12 @@ import {
   listVentures as listVentureRecords
 } from "@avs/db";
 
-export async function listVentures(workspaceId: string): Promise<Venture[]> {
-  return listVentureRecords(workspaceId);
+export async function listVentures(
+  workspaceId: string,
+  limit?: number,
+  offset?: number
+): Promise<Venture[]> {
+  return listVentureRecords(workspaceId, limit, offset);
 }
 
 export async function getVenture(id: string, workspaceId: string): Promise<Venture | null> {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   fetchSession,
@@ -160,9 +161,9 @@ export default function LoginPage() {
             <button type="submit" className="btn btn-primary" disabled={busy}>
               {busy ? "Signing In..." : "Sign In"}
             </button>
-            <a href="/forgot-password" className="auth-forgot-link">
+            <Link href="/forgot-password" className="auth-forgot-link">
               Forgot your password?
-            </a>
+            </Link>
           </form>
         ) : (
           <form className="auth-form" onSubmit={handleRegister}>

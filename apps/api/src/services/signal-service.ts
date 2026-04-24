@@ -4,6 +4,7 @@ import {
   listSignalsForOpportunity as listSignalsForOpportunityRecords
 } from "@avs/db";
 import type { SignalCreateInput } from "@avs/types";
+import { runDiscoveryWorkflow } from "../workflows/discovery-workflow.js";
 
 export class SignalScopeError extends Error {
   constructor(message: string) {
@@ -20,7 +21,17 @@ export async function createSignal(input: SignalCreateInput, workspaceId: string
     }
   }
 
-  return createSignalRecord(input);
+  const result = await createSignalRecord(input);
+
+  // Fire-and-forget: run discovery workflow without blocking the response
+  void runDiscoveryWorkflow({
+    signalId: result.signal.id,
+    ...(input.opportunityId ? { opportunityId: input.opportunityId, workspaceId } : {})
+  }).catch((err: unknown) => {
+    console.error("[discovery-workflow] error for signal", result.signal.id, err);
+  });
+
+  return result;
 }
 
 export async function listSignalsForOpportunity(opportunityId: string, workspaceId: string) {

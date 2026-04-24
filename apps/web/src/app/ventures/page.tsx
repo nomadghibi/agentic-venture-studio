@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { AuthSession, DashboardSummary, Venture } from "@avs/types";
+import type { DashboardSummary, Venture } from "@avs/types";
+import { useAuth } from "@/hooks/useAuth";
 import {
   fetchDashboardSummary,
-  fetchSession,
   fetchVentures,
   getApiErrorMessage,
   getApiStatusCode,
@@ -13,81 +14,53 @@ import {
 } from "@/services/api";
 
 function badgeClassForStage(stage: string): "good" | "pending" | "bad" {
-  if (stage === "live") {
-    return "good";
-  }
-
-  if (stage === "killed" || stage === "archived") {
-    return "bad";
-  }
-
+  if (stage === "live") return "good";
+  if (stage === "killed" || stage === "archived") return "bad";
   return "pending";
 }
 
 export default function VenturesPage() {
   const router = useRouter();
-  const [session, setSession] = useState<AuthSession | null>(null);
+  const { session, loading } = useAuth("/ventures");
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [ventures, setVentures] = useState<Venture[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (!session) return;
     let cancelled = false;
 
     async function loadData() {
-      setLoading(true);
+      setDataLoading(true);
       setError("");
-
       try {
-        const activeSession = await fetchSession();
-        if (!activeSession) {
-          router.replace("/login?next=/ventures");
-          return;
-        }
-
         const [summaryData, ventureData] = await Promise.all([
           fetchDashboardSummary(),
           fetchVentures()
         ]);
-
-        if (cancelled) {
-          return;
-        }
-
-        setSession(activeSession);
+        if (cancelled) return;
         setSummary(summaryData);
         setVentures(ventureData);
       } catch (loadError) {
-        if (cancelled) {
-          return;
-        }
-
-        const statusCode = getApiStatusCode(loadError);
-        if (statusCode === 401) {
+        if (cancelled) return;
+        if (getApiStatusCode(loadError) === 401) {
           router.replace("/login?next=/ventures");
           return;
         }
-
         setError(getApiErrorMessage(loadError));
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setDataLoading(false);
       }
     }
 
     void loadData();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [router]);
+    return () => { cancelled = true; };
+  }, [session, router]);
 
   async function handleLogout() {
     setBusy(true);
-
     try {
       await logout();
     } finally {
@@ -95,7 +68,7 @@ export default function VenturesPage() {
     }
   }
 
-  if (loading) {
+  if (loading || dataLoading) {
     return (
       <main className="page-shell">
         <article className="panel">
@@ -112,9 +85,9 @@ export default function VenturesPage() {
         <article className="panel">
           <h1>Session required</h1>
           <p>Please sign in to view venture portfolio data.</p>
-          <a href="/login" className="btn btn-primary">
+          <Link href="/login" className="btn btn-primary">
             Go To Login
-          </a>
+          </Link>
         </article>
       </main>
     );
@@ -131,10 +104,15 @@ export default function VenturesPage() {
           </p>
         </div>
         <div className="topbar-actions">
-          <a href="/workspace" className="btn btn-ghost">
+          <Link href="/workspace" className="btn btn-ghost">
             Back To Workspace
-          </a>
-          <button type="button" className="btn btn-ghost" onClick={handleLogout} disabled={busy}>
+          </Link>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={handleLogout}
+            disabled={busy}
+          >
             Log Out
           </button>
         </div>

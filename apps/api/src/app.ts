@@ -42,6 +42,19 @@ export function buildApp() {
     credentials: true
   });
 
+  // CSRF: reject state-mutating requests that carry an unrecognised Origin header.
+  // Requests with no Origin (curl, server-to-server) are allowed through.
+  app.addHook("onRequest", async (request, reply) => {
+    const method = request.method.toUpperCase();
+    if (!["POST", "PUT", "PATCH", "DELETE"].includes(method)) return;
+    const origin = request.headers.origin;
+    if (origin && !allowedOrigins.has(origin)) {
+      return reply.code(403).send({
+        error: { code: "csrf_rejected", message: "Cross-origin request blocked" }
+      });
+    }
+  });
+
   app.register(rateLimit, {
     global: true,
     max: 200,

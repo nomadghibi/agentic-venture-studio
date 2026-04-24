@@ -22,11 +22,6 @@ function resolveSessionToken(request: FastifyRequest): string | null {
     }
   }
 
-  const sessionHeader = request.headers["x-session-token"];
-  if (typeof sessionHeader === "string" && sessionHeader.trim().length > 0) {
-    return sessionHeader.trim();
-  }
-
   const cookies = parseCookieHeader(request.headers.cookie);
   const cookieToken = cookies[env.SESSION_COOKIE_NAME];
 

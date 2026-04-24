@@ -4,3 +4,6 @@ export * from "./prompts/opportunity-discovery.js";
 export * from "./prompts/problem-validation.js";
 export * from "./tools/tool-registry.js";
 export * from "./evaluators/confidence.js";
+export * from "./llm/client.js";
+export * from "./agents/discovery-agent.js";
+export * from "./agents/validation-agent.js";

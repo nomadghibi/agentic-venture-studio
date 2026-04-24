@@ -35,5 +35,9 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     forgotPasswordHandler
   );
 
-  app.post("/auth/reset-password", resetPasswordHandler);
+  app.post(
+    "/auth/reset-password",
+    { config: { rateLimit: { max: 10, timeWindow: FIFTEEN_MIN_MS } } },
+    resetPasswordHandler
+  );
 }

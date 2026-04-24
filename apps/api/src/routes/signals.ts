@@ -2,7 +2,8 @@ import type { UserRole } from "@avs/types";
 import type { FastifyInstance } from "fastify";
 import {
   ingestSignal,
-  listOpportunitySignals
+  listOpportunitySignals,
+  listWorkspaceSignals
 } from "../controllers/signal-controller.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
@@ -14,6 +15,7 @@ const signalWriteRoles: UserRole[] = [
 ];
 
 export async function registerSignalRoutes(app: FastifyInstance) {
+  app.get("/signals", { preHandler: [requireAuth] }, listWorkspaceSignals);
   app.post(
     "/signals",
     { preHandler: [requireAuth, requireRole(signalWriteRoles)] },

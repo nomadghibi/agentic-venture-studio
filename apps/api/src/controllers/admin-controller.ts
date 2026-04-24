@@ -34,7 +34,7 @@ export async function updateUserRoleHandler(request: FastifyRequest, reply: Fast
     });
   }
 
-  const updated = await updateUserRole(id, role);
+  const updated = await updateUserRole(id, role, request.auth.workspaceId);
   if (!updated) {
     return reply.code(404).send({
       error: { code: "not_found", message: "User not found." }

@@ -40,6 +40,7 @@ export type OpportunityCreateInsert = OpportunityInsert & {
 
 type WorkflowEventInsert = {
   opportunityId: string;
+  workspaceId?: string;
   eventType: string;
   triggeredBy?: string;
   stageFrom?: string;
@@ -49,6 +50,7 @@ type WorkflowEventInsert = {
 
 type DecisionRecordInsert = {
   opportunityId: string;
+  workspaceId?: string;
   decisionType: OpportunityDecisionInput["decisionType"];
   reason: string;
   decidedBy?: string;
@@ -154,9 +156,13 @@ async function resolveExistingUserId(userId?: string): Promise<string | null> {
   return row?.id ?? null;
 }
 
-export async function listOpportunities(workspaceId: string): Promise<Opportunity[]> {
-  const result = await db.query(listOpportunitiesSql, [workspaceId]);
-  return result.rows.map((row) => mapRowToOpportunity(row as OpportunityRow));
+export async function listOpportunities(
+  workspaceId: string,
+  limit = 50,
+  offset = 0
+): Promise<Opportunity[]> {
+  const result = await db.query(listOpportunitiesSql, [workspaceId, limit, offset]);
+  return result.rows.map((row: OpportunityRow) => mapRowToOpportunity(row));
 }
 
 export async function getOpportunityById(
@@ -435,9 +441,10 @@ export async function createWorkflowEvent(input: WorkflowEventInsert): Promise<s
         stage_from,
         stage_to,
         triggered_by,
+        workspace_id,
         payload
       )
-      VALUES ($1, $2, 'opportunity', $3, $4, $5, $6, $7::jsonb)
+      VALUES ($1, $2, 'opportunity', $3, $4, $5, $6, $7, $8::jsonb)
     `,
     [
       id,
@@ -446,6 +453,7 @@ export async function createWorkflowEvent(input: WorkflowEventInsert): Promise<s
       input.stageFrom ?? null,
       input.stageTo ?? null,
       actorId,
+      input.workspaceId ?? null,
       JSON.stringify(input.payload ?? {})
     ]
   );
@@ -465,11 +473,12 @@ export async function createDecisionRecord(input: DecisionRecordInsert): Promise
         entity_id,
         decision_type,
         decision_reason,
-        decided_by
+        decided_by,
+        workspace_id
       )
-      VALUES ($1, 'opportunity', $2, $3, $4, $5)
+      VALUES ($1, 'opportunity', $2, $3, $4, $5, $6)
     `,
-    [id, input.opportunityId, input.decisionType, input.reason, decidedBy]
+    [id, input.opportunityId, input.decisionType, input.reason, decidedBy, input.workspaceId ?? null]
   );
 
   return id;
@@ -568,7 +577,7 @@ export async function listOpportunityTimeline(
     [opportunityId, workspaceId]
   );
 
-  return result.rows.map((row) => ({
+  return result.rows.map((row: TimelineRow) => ({
     id: row.id,
     kind: row.kind,
     title: row.title,

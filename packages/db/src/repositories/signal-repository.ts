@@ -140,6 +140,30 @@ export async function createSignal(input: SignalCreateInput): Promise<CreatedSig
   }
 }
 
+export async function getSignalById(signalId: string): Promise<Signal | null> {
+  const result = await db.query<SignalRow>(
+    `SELECT id, source_type, source_url, source_title, content_excerpt,
+            created_at::text AS created_at
+     FROM signals WHERE id = $1`,
+    [signalId]
+  );
+  return result.rows[0] ? mapSignal(result.rows[0]) : null;
+}
+
+export async function listSignalsForWorkspace(workspaceId: string): Promise<Signal[]> {
+  const result = await db.query<SignalRow>(
+    `SELECT DISTINCT s.id, s.source_type, s.source_url, s.source_title,
+            s.content_excerpt, s.created_at::text AS created_at
+     FROM signals s
+     JOIN opportunity_signal_links osl ON osl.signal_id = s.id
+     JOIN opportunities o ON o.id = osl.opportunity_id
+     WHERE o.workspace_id = $1
+     ORDER BY s.created_at DESC`,
+    [workspaceId]
+  );
+  return result.rows.map(mapSignal);
+}
+
 export type SignalWithLink = Signal & {
   relevanceScore?: number;
   isPrimaryEvidence: boolean;
@@ -171,7 +195,7 @@ export async function listSignalsForOpportunity(
     [opportunityId, workspaceId]
   );
 
-  return result.rows.map((row) => ({
+  return result.rows.map((row: SignalWithLinkRow) => ({
     ...mapSignal(row),
     ...(row.relevance_score == null
       ? {}

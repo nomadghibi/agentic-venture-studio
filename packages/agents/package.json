@@ -13,6 +13,7 @@
     "test": "echo \"No tests yet\""
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.91.0",
     "@avs/types": "workspace:*",
     "zod": "^3.24.1"
   },

@@ -62,7 +62,11 @@ function mapVenture(row: VentureRow): Venture {
   };
 }
 
-export async function listVentures(workspaceId: string): Promise<Venture[]> {
+export async function listVentures(
+  workspaceId: string,
+  limit = 50,
+  offset = 0
+): Promise<Venture[]> {
   const result = await db.query<VentureRow>(
     `
       SELECT
@@ -81,11 +85,12 @@ export async function listVentures(workspaceId: string): Promise<Venture[]> {
       FROM ventures
       WHERE workspace_id = $1
       ORDER BY updated_at DESC
+      LIMIT $2 OFFSET $3
     `,
-    [workspaceId]
+    [workspaceId, limit, offset]
   );
 
-  return result.rows.map((row) => mapVenture(row));
+  return result.rows.map((row: VentureRow) => mapVenture(row));
 }
 
 export async function getVentureById(id: string, workspaceId: string): Promise<Venture | null> {

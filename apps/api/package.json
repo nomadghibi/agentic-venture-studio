@@ -9,7 +9,7 @@
     "start": "node dist/apps/api/src/server.js",
     "lint": "echo \"No lint config wired yet\"",
     "typecheck": "tsc --noEmit",
-    "test": "echo \"No tests yet\""
+    "test": "vitest run"
   },
   "dependencies": {
     "@avs/agents": "workspace:*",
@@ -25,6 +25,7 @@
   "devDependencies": {
     "@types/nodemailer": "^8.0.0",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.5"
   }
 }

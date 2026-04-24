@@ -14,19 +14,13 @@ import type {
   OpportunityStageTransitionInput,
   OpportunityTimelineItem,
   ResetPasswordInput,
+  Signal,
   Venture,
   Workspace
 } from "@avs/types";
 
-const browserDefaultApiBaseUrl =
-  typeof window === "undefined"
-    ? undefined
-    : `${window.location.protocol}//${window.location.hostname}:4050/api/v1`;
-
 const rawApiBaseUrl =
   process.env.NEXT_PUBLIC_API_BASE_URL ??
-  process.env.API_BASE_URL ??
-  browserDefaultApiBaseUrl ??
   "http://localhost:4050/api/v1";
 
 const apiBaseUrl = rawApiBaseUrl.replace(/\/+$/, "");
@@ -249,6 +243,10 @@ export async function reviewApproval(id: string, input: ApprovalReviewInput): Pr
     method: "PATCH",
     body: input
   });
+}
+
+export async function fetchSignals(): Promise<Signal[]> {
+  return requestOrThrow<Signal[]>("/signals");
 }
 
 export async function fetchVentures(): Promise<Venture[]> {

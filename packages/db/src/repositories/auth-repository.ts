@@ -173,10 +173,21 @@ export async function updateUserPassword(userId: string, passwordHash: string): 
   );
 }
 
-export async function updateUserRole(userId: string, role: UserProfile["role"]): Promise<boolean> {
+export async function updateUserRole(
+  userId: string,
+  role: UserProfile["role"],
+  workspaceId: string
+): Promise<boolean> {
   const result = await db.query(
-    `UPDATE users SET role = $2, updated_at = NOW() WHERE id = $1`,
-    [userId, role]
+    `
+      UPDATE users SET role = $2, updated_at = NOW()
+      WHERE id = $1
+        AND EXISTS (
+          SELECT 1 FROM workspace_memberships
+          WHERE user_id = $1 AND workspace_id = $3
+        )
+    `,
+    [userId, role, workspaceId]
   );
   return Number(result.rowCount ?? 0) > 0;
 }

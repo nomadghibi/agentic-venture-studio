@@ -79,7 +79,7 @@ export async function listApprovalsForOpportunity(
     [opportunityId, workspaceId]
   );
 
-  return result.rows.map((row) => mapApproval(row));
+  return result.rows.map((row: ApprovalRow) => mapApproval(row));
 }
 
 export async function countPendingApprovalsForOpportunity(

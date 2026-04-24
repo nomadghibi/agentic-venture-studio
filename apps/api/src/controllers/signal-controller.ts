@@ -5,6 +5,7 @@ import {
   createSignal,
   listSignalsForOpportunity
 } from "../services/signal-service.js";
+import { listSignalsForWorkspace } from "@avs/db";
 import { z } from "zod";
 
 type PostgresError = Error & { code?: string };
@@ -75,4 +76,9 @@ export async function listOpportunitySignals(
 
     throw error;
   }
+}
+
+export async function listWorkspaceSignals(request: FastifyRequest, reply: FastifyReply) {
+  const data = await listSignalsForWorkspace(request.auth.workspaceId);
+  return reply.send({ data });
 }

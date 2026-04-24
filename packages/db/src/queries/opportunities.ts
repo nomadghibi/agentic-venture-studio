@@ -22,4 +22,5 @@ export const listOpportunitiesSql = `
   FROM opportunities
   WHERE workspace_id = $1
   ORDER BY overall_score DESC NULLS LAST, created_at DESC
+  LIMIT $2 OFFSET $3
 `;

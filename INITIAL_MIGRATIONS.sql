@@ -1,6 +1,14 @@
--- DB_SCHEMA.sql
--- Agentic Venture Studio
--- PostgreSQL-oriented starter schema
+-- REFERENCE ONLY — DO NOT RUN THIS FILE DIRECTLY.
+-- This is the original baseline schema captured before the incremental migration
+-- system was introduced. Running this file alone will produce an incomplete schema.
+--
+-- To provision a fresh database, apply the migrations in order:
+--   packages/db/migrations/0001_initial.sql
+--   packages/db/migrations/0002_auth_workspaces.sql
+--   packages/db/migrations/0003_session_token_hashing_and_password_reset.sql
+--   packages/db/migrations/0004_workspace_id_on_audit_tables.sql
+--
+-- Original baseline (archived for reference):
 
 CREATE TABLE users (
     id TEXT PRIMARY KEY,
