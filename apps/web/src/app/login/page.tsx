@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -11,7 +11,7 @@ import {
   register
 } from "@/services/api";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = useMemo(() => searchParams.get("next") || "/workspace", [searchParams]);
@@ -238,5 +238,19 @@ export default function LoginPage() {
         </footer>
       </section>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <main className="auth-shell">
+        <section className="auth-panel">
+          <p>Loading...</p>
+        </section>
+      </main>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
