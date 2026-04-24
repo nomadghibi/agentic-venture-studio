@@ -249,6 +249,10 @@ export async function fetchSignals(): Promise<Signal[]> {
   return requestOrThrow<Signal[]>("/signals");
 }
 
+export async function fetchOpportunitySignals(opportunityId: string): Promise<Signal[]> {
+  return requestOrThrow<Signal[]>(`/opportunities/${opportunityId}/signals`);
+}
+
 export async function fetchVentures(): Promise<Venture[]> {
   return requestOrThrow<Venture[]>("/ventures");
 }

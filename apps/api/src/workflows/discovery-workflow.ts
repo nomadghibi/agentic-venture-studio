@@ -1,6 +1,6 @@
 import { discoveryAgent, runAgent } from "@avs/agents";
 import type { DiscoveryOutput } from "@avs/agents";
-import { getSignalById, getOpportunityById, updateOpportunityScores } from "@avs/db";
+import { getSignalById, getOpportunityById, updateOpportunityScores, createWorkflowEvent } from "@avs/db";
 
 const INTENSITY_TO_SCORE: Record<DiscoveryOutput["painIntensity"], number> = {
   low: 25,
@@ -41,7 +41,7 @@ export async function runDiscoveryWorkflow(input: DiscoveryWorkflowInput) {
   if (input.opportunityId && input.workspaceId) {
     const current = await getOpportunityById(input.opportunityId, input.workspaceId);
     if (current) {
-      await updateOpportunityScores(input.opportunityId, input.workspaceId, {
+      const updated = await updateOpportunityScores(input.opportunityId, input.workspaceId, {
         painScore: INTENSITY_TO_SCORE[output.painIntensity],
         frequencyScore: current.frequencyScore,
         buyerClarityScore: STRENGTH_TO_SCORE[output.evidenceStrength],
@@ -51,6 +51,20 @@ export async function runDiscoveryWorkflow(input: DiscoveryWorkflowInput) {
         strategicFitScore: current.strategicFitScore,
         portfolioValueScore: current.portfolioValueScore
       });
+
+      if (updated) {
+        await createWorkflowEvent({
+          opportunityId: input.opportunityId,
+          workspaceId: input.workspaceId,
+          eventType: "opportunity_scored",
+          payload: {
+            source: "discovery_agent",
+            recommendation: output.recommendation,
+            confidence: result.confidence,
+            overallScore: Number(updated.overallScore.toFixed(2))
+          }
+        });
+      }
     }
   }
 

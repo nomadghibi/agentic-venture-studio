@@ -24,10 +24,10 @@ export const OpportunitySchema = z.object({
 });
 
 export const OpportunityCreateInputSchema = z.object({
-  title: z.string().min(1),
-  problemStatement: z.string().min(1),
-  targetBuyer: z.string().min(1),
-  industry: z.string().min(1)
+  title: z.string().min(1).max(200),
+  problemStatement: z.string().min(1).max(2000),
+  targetBuyer: z.string().min(1).max(200),
+  industry: z.string().min(1).max(100)
 });
 
 export const OpportunityScoreInputSchema = z.object({

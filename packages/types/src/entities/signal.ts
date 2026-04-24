@@ -5,7 +5,7 @@ export const SignalSchema = z.object({
   sourceType: z.string().min(1),
   sourceUrl: z.string().url().optional(),
   sourceTitle: z.string().optional(),
-  contentExcerpt: z.string().min(1),
+  contentExcerpt: z.string().min(1).max(10_000),
   createdAt: z.string()
 });
 
@@ -13,7 +13,7 @@ export const SignalCreateInputSchema = z.object({
   sourceType: z.string().min(1),
   sourceUrl: z.string().url().optional(),
   sourceTitle: z.string().optional(),
-  contentExcerpt: z.string().min(1),
+  contentExcerpt: z.string().min(1).max(10_000),
   opportunityId: z.string().uuid().optional(),
   relevanceScore: z.number().min(0).max(1).optional(),
   isPrimaryEvidence: z.boolean().optional()

@@ -26,6 +26,7 @@ import {
   assertAllowedStageTransition,
   statusForStage
 } from "./opportunity-logic.js";
+import { runValidationWorkflow } from "../workflows/validation-workflow.js";
 
 export { StageTransitionError };
 
@@ -145,6 +146,12 @@ export async function transitionOpportunityStage(
     stageTo: input.nextStage,
     ...(input.note ? { payload: { note: input.note } } : {})
   });
+
+  if (input.nextStage === "validation") {
+    void runValidationWorkflow({ opportunityId: id, workspaceId }).catch((err: unknown) => {
+      console.error("[validation-workflow] error for opportunity", id, err);
+    });
+  }
 
   const approvalType = approvalTypeForStage(input.nextStage);
   if (!approvalType) {

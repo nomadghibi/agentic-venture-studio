@@ -4,13 +4,13 @@ import { WorkspaceSchema } from "../entities/workspace.js";
 
 export const AuthLoginInputSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8)
+  password: z.string().min(8).max(128)
 });
 
 export const AuthRegisterInputSchema = z.object({
   name: z.string().min(2).max(80),
   email: z.string().email(),
-  password: z.string().min(8),
+  password: z.string().min(8).max(128),
   workspaceName: z.string().min(2).max(80).optional()
 });
 
@@ -25,7 +25,7 @@ export const ForgotPasswordInputSchema = z.object({
 
 export const ResetPasswordInputSchema = z.object({
   token: z.string().min(1),
-  password: z.string().min(8)
+  password: z.string().min(8).max(128)
 });
 
 export type AuthLoginInput = z.infer<typeof AuthLoginInputSchema>;
