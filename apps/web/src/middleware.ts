@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/forgot-password", "/reset-password"];
+const PUBLIC_PATHS = ["/", "/login", "/forgot-password", "/reset-password"];
 
 const SESSION_COOKIE_NAME = process.env.SESSION_COOKIE_NAME ?? "avs_session";
 
