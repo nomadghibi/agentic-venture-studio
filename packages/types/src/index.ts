@@ -16,3 +16,4 @@ export * from "./api/signals.js";
 export * from "./api/ventures.js";
 export * from "./api/workspaces.js";
 export * from "./events/domain-events.js";
+export * from "./entities/artifact.js";

@@ -13,6 +13,7 @@ import type {
   OpportunityScoreInput,
   OpportunityStageTransitionInput,
   OpportunityTimelineItem,
+  PrdContent,
   ResetPasswordInput,
   Signal,
   Venture,
@@ -251,6 +252,43 @@ export async function fetchSignals(): Promise<Signal[]> {
 
 export async function fetchOpportunitySignals(opportunityId: string): Promise<Signal[]> {
   return requestOrThrow<Signal[]>(`/opportunities/${opportunityId}/signals`);
+}
+
+export async function fetchOpportunity(id: string): Promise<Opportunity> {
+  return requestOrThrow<Opportunity>(`/opportunities/${id}`);
+}
+
+export type PrdArtifact = {
+  id: string;
+  version: number;
+  createdAt: string;
+  content: PrdContent;
+};
+
+export async function fetchPrd(opportunityId: string): Promise<PrdArtifact | null> {
+  return request<PrdArtifact>(`/opportunities/${opportunityId}/prd`);
+}
+
+export async function generatePrd(opportunityId: string): Promise<{ queued: boolean }> {
+  return requestOrThrow<{ queued: boolean }>(`/opportunities/${opportunityId}/prd`, {
+    method: "POST"
+  });
+}
+
+export type IngestSignalInput = {
+  sourceType: string;
+  sourceTitle?: string;
+  sourceUrl?: string;
+  contentExcerpt: string;
+  opportunityId?: string;
+};
+
+export async function ingestSignal(input: IngestSignalInput): Promise<Signal> {
+  const result = await requestOrThrow<Signal & { queued: boolean }>("/signals", {
+    method: "POST",
+    body: input
+  });
+  return result;
 }
 
 export async function fetchVentures(): Promise<Venture[]> {

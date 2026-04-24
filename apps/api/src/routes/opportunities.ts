@@ -9,6 +9,7 @@ import {
   transitionOpportunityStage,
   listOpportunities
 } from "../controllers/opportunity-controller.js";
+import { generatePrd, getPrd } from "../controllers/prd-controller.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
 const opportunityWriteRoles: UserRole[] = [
@@ -49,4 +50,10 @@ export async function registerOpportunityRoutes(app: FastifyInstance) {
     { preHandler: [requireAuth, requireRole(opportunityDecisionRoles)] },
     decideOpportunity
   );
+  app.post(
+    "/opportunities/:id/prd",
+    { preHandler: [requireAuth, requireRole(opportunityWriteRoles)] },
+    generatePrd
+  );
+  app.get("/opportunities/:id/prd", { preHandler: [requireAuth] }, getPrd);
 }

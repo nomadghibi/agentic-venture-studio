@@ -7,6 +7,7 @@ import { DashboardSummary as DashboardSummaryCard } from "@/features/dashboard/D
 import { ApprovalQueuePreview } from "@/features/approvals/ApprovalQueuePreview";
 import { WorkspaceMvpControl } from "@/features/workspace/WorkspaceMvpControl";
 import { SignalsPanel } from "@/features/signals/SignalsPanel";
+import { IngestSignalForm } from "@/features/signals/IngestSignalForm";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspaceData } from "@/hooks/useWorkspaceData";
 import { logout } from "@/services/api";
@@ -31,7 +32,8 @@ export default function WorkspacePage() {
     newWorkspaceName,
     setNewWorkspaceName,
     handleSelectWorkspace,
-    handleCreateWorkspace
+    handleCreateWorkspace,
+    refresh
   } = useWorkspaceData(authSession, handleUnauthenticated);
 
   async function handleLogout() {
@@ -154,6 +156,12 @@ export default function WorkspacePage() {
         key={currentWorkspaceId}
         initialOpportunities={opportunities}
         userRole={session.user.role}
+      />
+
+      <IngestSignalForm
+        key={currentWorkspaceId}
+        opportunities={opportunities}
+        onSignalIngested={refresh}
       />
 
       <SignalsPanel key={currentWorkspaceId} />

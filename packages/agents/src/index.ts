@@ -7,3 +7,5 @@ export * from "./evaluators/confidence.js";
 export * from "./llm/client.js";
 export * from "./agents/discovery-agent.js";
 export * from "./agents/validation-agent.js";
+export * from "./agents/prd-agent.js";
+export * from "./prompts/prd.js";

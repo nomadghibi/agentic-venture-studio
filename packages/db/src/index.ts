@@ -9,3 +9,4 @@ export * from "./repositories/opportunity-repository.js";
 export * from "./repositories/signal-repository.js";
 export * from "./repositories/venture-repository.js";
 export * from "./repositories/workspace-repository.js";
+export * from "./repositories/artifact-repository.js";

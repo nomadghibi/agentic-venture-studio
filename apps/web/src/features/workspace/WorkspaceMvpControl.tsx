@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   type Approval,
@@ -409,6 +410,7 @@ export function WorkspaceMvpControl({ initialOpportunities, userRole }: Workspac
               <th>Stage</th>
               <th>Score</th>
               <th>Status</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -425,6 +427,15 @@ export function WorkspaceMvpControl({ initialOpportunities, userRole }: Workspac
                   <span className={`badge ${row.status === "approved" ? "good" : "pending"}`}>
                     {row.status}
                   </span>
+                </td>
+                <td>
+                  <Link
+                    href={`/workspace/opportunities/${row.id}`}
+                    className="btn btn-ghost btn-sm"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    View →
+                  </Link>
                 </td>
               </tr>
             ))}
