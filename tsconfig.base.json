@@ -11,12 +11,6 @@
     "allowSyntheticDefaultImports": true,
     "verbatimModuleSyntax": true,
     "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
-    "baseUrl": ".",
-    "paths": {
-      "@avs/types": ["packages/types/src/index.ts"],
-      "@avs/db": ["packages/db/src/index.ts"],
-      "@avs/agents": ["packages/agents/src/index.ts"]
-    }
+    "exactOptionalPropertyTypes": true
   }
 }
