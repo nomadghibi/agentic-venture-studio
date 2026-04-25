@@ -69,6 +69,8 @@ export function buildApp() {
     }
   });
 
+  app.get("/health", async () => ({ status: "ok", service: "@avs/api", now: new Date().toISOString() }));
+
   app.register(registerRoutes, { prefix: "/api/v1" });
 
   return app;
