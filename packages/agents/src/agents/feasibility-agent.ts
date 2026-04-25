@@ -1,6 +1,7 @@
 import { getAnthropicClient, DEFAULT_MODEL } from "../llm/client.js";
 import { feasibilityPrompt } from "../prompts/feasibility.js";
 import type { AgentDefinition, AgentContext } from "../runtime/agent-runtime.js";
+import type { FeasibilityContent } from "@avs/types";
 
 export interface FeasibilityInput {
   opportunityId: string;
@@ -13,23 +14,13 @@ export interface FeasibilityInput {
   coreFeatures?: string[];
 }
 
-export interface FeasibilityOutput {
-  buildComplexity: "low" | "medium" | "high";
-  teamRequirements: string;
-  estimatedTimeline: string;
-  keyRisks: string[];
-  technicalDependencies: string[];
-  feasibilityScore: number;
-  confidence: number;
-  recommendation: "proceed" | "de-risk" | "reconsider";
-  rationale: string;
-}
+export type { FeasibilityContent as FeasibilityOutput };
 
-export const feasibilityAgent: AgentDefinition<FeasibilityInput, FeasibilityOutput> = {
+export const feasibilityAgent: AgentDefinition<FeasibilityInput, FeasibilityContent> = {
   name: "feasibility-assessment",
   version: "1.0.0",
 
-  async execute(input: FeasibilityInput, _context: AgentContext): Promise<FeasibilityOutput> {
+  async execute(input: FeasibilityInput, _context: AgentContext): Promise<FeasibilityContent> {
     const client = getAnthropicClient();
 
     const lines = [
@@ -127,6 +118,6 @@ export const feasibilityAgent: AgentDefinition<FeasibilityInput, FeasibilityOutp
       throw new Error("Feasibility agent did not return a structured result");
     }
 
-    return toolUse.input as FeasibilityOutput;
+    return toolUse.input as FeasibilityContent;
   }
 };

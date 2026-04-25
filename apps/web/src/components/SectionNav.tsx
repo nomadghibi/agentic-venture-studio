@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 const SECTION_LINKS = [
@@ -79,9 +80,9 @@ export function SectionNav() {
 
   return (
     <header className="site-nav">
-      <a href="/" className="site-brand">
+      <Link href="/" className="site-brand">
         Agentic Venture Studio
-      </a>
+      </Link>
       <nav className="site-nav-links" aria-label="Primary">
         {SECTION_LINKS.map((link) => {
           const isActive = link.id === activeId;

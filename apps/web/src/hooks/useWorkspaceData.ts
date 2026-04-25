@@ -33,7 +33,7 @@ export function useWorkspaceData(
   session: AuthSession | null,
   onUnauthenticated: () => void
 ): WorkspaceData {
-  const router = useRouter();
+  useRouter();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [currentWorkspaceId, setCurrentWorkspaceId] = useState("");
   const [summary, setSummary] = useState<DashboardSummary | null>(null);

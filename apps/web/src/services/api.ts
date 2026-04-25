@@ -2,7 +2,10 @@ import type {
   Approval,
   ApprovalReviewInput,
   ArchitectureContent,
+  FeasibilityContent,
   MonetizationContent,
+  MvpRoadmapContent,
+  BuildPlanContent,
   AuthLoginInput,
   AuthRegisterInput,
   AuthSession,
@@ -331,6 +334,57 @@ export async function fetchMonetization(opportunityId: string): Promise<Monetiza
 
 export async function generateMonetizationPlan(opportunityId: string): Promise<{ queued: boolean }> {
   return requestOrThrow<{ queued: boolean }>(`/opportunities/${opportunityId}/monetization`, {
+    method: "POST"
+  });
+}
+
+export type FeasibilityArtifact = {
+  id: string;
+  version: number;
+  createdAt: string;
+  content: FeasibilityContent;
+};
+
+export async function fetchFeasibility(opportunityId: string): Promise<FeasibilityArtifact | null> {
+  return request<FeasibilityArtifact>(`/opportunities/${opportunityId}/feasibility`);
+}
+
+export async function generateFeasibilityReport(opportunityId: string): Promise<{ queued: boolean }> {
+  return requestOrThrow<{ queued: boolean }>(`/opportunities/${opportunityId}/feasibility`, {
+    method: "POST"
+  });
+}
+
+export type MvpRoadmapArtifact = {
+  id: string;
+  version: number;
+  createdAt: string;
+  content: MvpRoadmapContent;
+};
+
+export async function fetchMvpRoadmap(opportunityId: string): Promise<MvpRoadmapArtifact | null> {
+  return request<MvpRoadmapArtifact>(`/opportunities/${opportunityId}/mvp-roadmap`);
+}
+
+export async function generateMvpRoadmap(opportunityId: string): Promise<{ queued: boolean }> {
+  return requestOrThrow<{ queued: boolean }>(`/opportunities/${opportunityId}/mvp-roadmap`, {
+    method: "POST"
+  });
+}
+
+export type BuildPlanArtifact = {
+  id: string;
+  version: number;
+  createdAt: string;
+  content: BuildPlanContent;
+};
+
+export async function fetchBuildPlan(opportunityId: string): Promise<BuildPlanArtifact | null> {
+  return request<BuildPlanArtifact>(`/opportunities/${opportunityId}/build-plan`);
+}
+
+export async function generateBuildPlan(opportunityId: string): Promise<{ queued: boolean }> {
+  return requestOrThrow<{ queued: boolean }>(`/opportunities/${opportunityId}/build-plan`, {
     method: "POST"
   });
 }

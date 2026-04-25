@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import type { Opportunity, OpportunityTimelineItem, PrdContent, Signal, MonetizationContent } from "@avs/types";
+import type { Opportunity, OpportunityTimelineItem, PrdContent, Signal, MonetizationContent, FeasibilityContent, MvpRoadmapContent, BuildPlanContent } from "@avs/types";
 import type { ArchitectureContent } from "@avs/types";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -16,13 +16,22 @@ import {
   generateArchitecture,
   fetchMonetization,
   generateMonetizationPlan,
+  fetchFeasibility,
+  generateFeasibilityReport,
+  fetchMvpRoadmap,
+  generateMvpRoadmap,
+  fetchBuildPlan,
+  generateBuildPlan,
   getApiErrorMessage,
   type PrdArtifact,
   type ArchitectureArtifact,
-  type MonetizationArtifact
+  type MonetizationArtifact,
+  type FeasibilityArtifact,
+  type MvpRoadmapArtifact,
+  type BuildPlanArtifact
 } from "@/services/api";
 
-type Tab = "overview" | "prd" | "architecture" | "monetization" | "signals" | "timeline";
+type Tab = "overview" | "prd" | "architecture" | "monetization" | "feasibility" | "mvp-roadmap" | "build-plan" | "signals" | "timeline";
 
 const SCORE_LABELS: Record<string, string> = {
   painScore: "Pain Intensity",
@@ -92,7 +101,7 @@ function PrdView({
 
       {!c && !busy ? (
         <article className="panel">
-          <p>No PRD generated yet. Click "Generate PRD" to create one using Claude.</p>
+          <p>No PRD generated yet. Click &ldquo;Generate PRD&rdquo; to create one using Claude.</p>
         </article>
       ) : null}
 
@@ -204,7 +213,7 @@ function ArchView({
 
       {!c && !busy ? (
         <article className="panel">
-          <p>No architecture generated yet. Click "Generate Architecture" to create one using Claude.</p>
+          <p>No architecture generated yet. Click &ldquo;Generate Architecture&rdquo; to create one using Claude.</p>
         </article>
       ) : null}
 
@@ -322,7 +331,7 @@ function MonetizationView({
 
       {!c && !busy ? (
         <article className="panel">
-          <p>No monetization strategy yet. Click "Generate Monetization Strategy" or advance the opportunity to the monetization stage.</p>
+          <p>No monetization strategy yet. Click &ldquo;Generate Monetization Strategy&rdquo; or advance the opportunity to the monetization stage.</p>
         </article>
       ) : null}
 
@@ -368,6 +377,344 @@ function MonetizationView({
   );
 }
 
+function FeasibilityView({
+  feasibility,
+  onRegenerate,
+  busy,
+  canWrite
+}: {
+  feasibility: FeasibilityArtifact | null;
+  onRegenerate: () => void;
+  busy: boolean;
+  canWrite: boolean;
+}) {
+  const c: FeasibilityContent | null = feasibility?.content ?? null;
+
+  const complexityClass = c?.buildComplexity === "low"
+    ? "good"
+    : c?.buildComplexity === "medium"
+      ? "pending"
+      : "bad";
+
+  const recommendationClass = c?.recommendation === "proceed"
+    ? "good"
+    : c?.recommendation === "de-risk"
+      ? "pending"
+      : "bad";
+
+  return (
+    <div className="stack">
+      <div className="topbar-actions" style={{ justifyContent: "flex-start" }}>
+        {canWrite ? (
+          <button
+            className="btn btn-primary"
+            type="button"
+            onClick={onRegenerate}
+            disabled={busy}
+          >
+            {feasibility ? "Regenerate Report" : "Generate Feasibility Report"}
+          </button>
+        ) : null}
+        {feasibility ? (
+          <small className="muted">
+            Version {feasibility.version} · {new Date(feasibility.createdAt).toLocaleString()}
+          </small>
+        ) : null}
+      </div>
+
+      {busy ? <p>Generating feasibility report… polling for results (20–40 seconds).</p> : null}
+
+      {!c && !busy ? (
+        <article className="panel">
+          <p>No feasibility report yet. Click &ldquo;Generate Feasibility Report&rdquo; or advance the opportunity to the feasibility stage.</p>
+        </article>
+      ) : null}
+
+      {c ? (
+        <div className="prd-doc stack">
+          <div className="grid-2">
+            <article className="panel">
+              <h3>Assessment</h3>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+                <span className={`badge ${complexityClass}`}>
+                  {c.buildComplexity} complexity
+                </span>
+                <span className={`badge ${recommendationClass}`}>
+                  {c.recommendation}
+                </span>
+              </div>
+              <p><strong>Score:</strong> {c.feasibilityScore}/100</p>
+              <p><strong>Confidence:</strong> {Math.round(c.confidence * 100)}%</p>
+            </article>
+            <article className="panel">
+              <h3>Build Estimate</h3>
+              <p style={{ fontSize: "1.1em", fontWeight: 600 }}>{c.estimatedTimeline}</p>
+              <h3 style={{ marginTop: 16 }}>Team Requirements</h3>
+              <p>{c.teamRequirements}</p>
+            </article>
+          </div>
+
+          <article className="panel">
+            <h3>Rationale</h3>
+            <p>{c.rationale}</p>
+          </article>
+
+          {c.keyRisks.length > 0 ? (
+            <article className="panel">
+              <h3>Key Risks</h3>
+              <ul className="prd-list">
+                {c.keyRisks.map((r) => <li key={r}>{r}</li>)}
+              </ul>
+            </article>
+          ) : null}
+
+          {c.technicalDependencies.length > 0 ? (
+            <article className="panel">
+              <h3>Technical Dependencies</h3>
+              <ul className="prd-list">
+                {c.technicalDependencies.map((d) => <li key={d}>{d}</li>)}
+              </ul>
+            </article>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function MvpRoadmapView({
+  roadmap,
+  onRegenerate,
+  busy,
+  canWrite
+}: {
+  roadmap: MvpRoadmapArtifact | null;
+  onRegenerate: () => void;
+  busy: boolean;
+  canWrite: boolean;
+}) {
+  const c: MvpRoadmapContent | null = roadmap?.content ?? null;
+
+  return (
+    <div className="stack">
+      <div className="topbar-actions" style={{ justifyContent: "flex-start" }}>
+        {canWrite ? (
+          <button className="btn btn-primary" type="button" onClick={onRegenerate} disabled={busy}>
+            {roadmap ? "Regenerate Roadmap" : "Generate MVP Roadmap"}
+          </button>
+        ) : null}
+        {roadmap ? (
+          <small className="muted">
+            Version {roadmap.version} · {new Date(roadmap.createdAt).toLocaleString()}
+          </small>
+        ) : null}
+      </div>
+
+      {busy ? <p>Generating MVP roadmap… polling for results (30–60 seconds).</p> : null}
+
+      {!c && !busy ? (
+        <article className="panel">
+          <p>No MVP roadmap yet. Generate a PRD and feasibility report first, then click &ldquo;Generate MVP Roadmap&rdquo;.</p>
+        </article>
+      ) : null}
+
+      {c ? (
+        <div className="prd-doc stack">
+          <div className="grid-2">
+            <article className="panel">
+              <h3>Sprint Plan</h3>
+              <p><strong>Total Duration:</strong> {c.totalDuration}</p>
+              <p style={{ marginTop: 8 }}>{c.rationale}</p>
+            </article>
+            <article className="panel">
+              <h3>Resources</h3>
+              <p>{c.resourceRequirements}</p>
+              <h3 style={{ marginTop: 16 }}>Confidence</h3>
+              <p>{Math.round(c.confidence * 100)}%</p>
+            </article>
+          </div>
+
+          <article className="panel">
+            <h3>Sprints</h3>
+            <div className="feature-list">
+              {c.sprints.map((s) => (
+                <div className="feature-item" key={s.sprint}>
+                  <div className="feature-head">
+                    <strong>Sprint {s.sprint}</strong>
+                    <span className="badge">{s.features.length} features</span>
+                  </div>
+                  <p><strong>Goal:</strong> {s.goal}</p>
+                  <ul className="prd-list">
+                    {s.features.map((f) => <li key={f}>{f}</li>)}
+                  </ul>
+                  <p><em>Done when:</em> {s.deliverable}</p>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="panel">
+            <h3>Milestones</h3>
+            <div className="feature-list">
+              {c.milestones.map((m) => (
+                <div className="feature-item" key={m.name}>
+                  <div className="feature-head">
+                    <strong>{m.name}</strong>
+                    <span className="badge">Week {m.week}</span>
+                  </div>
+                  <p>{m.deliverable}</p>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="panel">
+            <h3>Launch Criteria</h3>
+            <ul className="prd-list">
+              {c.launchCriteria.map((lc) => <li key={lc}>{lc}</li>)}
+            </ul>
+          </article>
+
+          <article className="panel">
+            <h3>Next Action</h3>
+            <p>{c.recommendation}</p>
+          </article>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function BuildPlanView({
+  plan,
+  onRegenerate,
+  busy,
+  canWrite
+}: {
+  plan: BuildPlanArtifact | null;
+  onRegenerate: () => void;
+  busy: boolean;
+  canWrite: boolean;
+}) {
+  const c: BuildPlanContent | null = plan?.content ?? null;
+
+  return (
+    <div className="stack">
+      <div className="topbar-actions" style={{ justifyContent: "flex-start" }}>
+        {canWrite ? (
+          <button className="btn btn-primary" type="button" onClick={onRegenerate} disabled={busy}>
+            {plan ? "Regenerate Build Plan" : "Generate Build Plan"}
+          </button>
+        ) : null}
+        {plan ? (
+          <small className="muted">
+            Version {plan.version} · {new Date(plan.createdAt).toLocaleString()}
+          </small>
+        ) : null}
+      </div>
+
+      {busy ? <p>Generating build plan… polling for results (30–60 seconds).</p> : null}
+
+      {!c && !busy ? (
+        <article className="panel">
+          <p>No build plan yet. Generate an architecture doc and MVP roadmap first, then click &ldquo;Generate Build Plan&rdquo;.</p>
+        </article>
+      ) : null}
+
+      {c ? (
+        <div className="prd-doc stack">
+          <div className="grid-2">
+            <article className="panel">
+              <h3>Overview</h3>
+              <p>{c.overview}</p>
+            </article>
+            <article className="panel">
+              <h3>Budget Estimate</h3>
+              <p>{c.totalBudgetEstimate}</p>
+              <h3 style={{ marginTop: 16 }}>Confidence</h3>
+              <p>{Math.round(c.confidence * 100)}%</p>
+            </article>
+          </div>
+
+          <article className="panel">
+            <h3>Build Phases</h3>
+            <div className="feature-list">
+              {c.phases.map((p) => (
+                <div className="feature-item" key={p.phase}>
+                  <div className="feature-head">
+                    <strong>Phase {p.phase}: {p.name}</strong>
+                    <span className="badge">{p.duration}</span>
+                  </div>
+                  <div style={{ marginTop: 8 }}>
+                    <strong>Objectives:</strong>
+                    <ul className="prd-list">
+                      {p.objectives.map((o) => <li key={o}>{o}</li>)}
+                    </ul>
+                  </div>
+                  <div style={{ marginTop: 8 }}>
+                    <strong>Tasks:</strong>
+                    <ul className="prd-list">
+                      {p.tasks.map((t) => <li key={t}>{t}</li>)}
+                    </ul>
+                  </div>
+                  <p style={{ marginTop: 8 }}><em>Done when:</em> {p.exitCriteria}</p>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <div className="grid-2">
+            <article className="panel">
+              <h3>Team</h3>
+              <div className="feature-list">
+                {c.teamRoles.map((r) => (
+                  <div className="feature-item" key={r.role}>
+                    <div className="feature-head">
+                      <strong>{r.role}</strong>
+                      <span className="badge">{r.hoursPerWeek}h/wk</span>
+                    </div>
+                    <p>{r.responsibilities}</p>
+                  </div>
+                ))}
+              </div>
+            </article>
+            <article className="panel">
+              <h3>External Dependencies</h3>
+              <ul className="prd-list">
+                {c.externalDependencies.map((d) => <li key={d}>{d}</li>)}
+              </ul>
+            </article>
+          </div>
+
+          {c.riskMitigation.length > 0 ? (
+            <article className="panel">
+              <h3>Risk Mitigation</h3>
+              <div className="feature-list">
+                {c.riskMitigation.map((r) => (
+                  <div className="feature-item" key={r.risk}>
+                    <strong>{r.risk}</strong>
+                    <p>{r.mitigation}</p>
+                  </div>
+                ))}
+              </div>
+            </article>
+          ) : null}
+
+          <article className="panel">
+            <h3>Definition of Done</h3>
+            <p>{c.definitionOfDone}</p>
+          </article>
+
+          <article className="panel">
+            <h3>Next Action</h3>
+            <p>{c.recommendation}</p>
+          </article>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 const POLL_INTERVAL_MS = 5_000;
 const POLL_MAX_ATTEMPTS = 18; // 90 seconds
 
@@ -388,6 +735,15 @@ export default function OpportunityDetailPage() {
   const [mono, setMono] = useState<MonetizationArtifact | null>(null);
   const [monoLoading, setMonoLoading] = useState(false);
   const [monoBusy, setMonoBusy] = useState(false);
+  const [feasibility, setFeasibility] = useState<FeasibilityArtifact | null>(null);
+  const [feasibilityLoading, setFeasibilityLoading] = useState(false);
+  const [feasibilityBusy, setFeasibilityBusy] = useState(false);
+  const [roadmap, setRoadmap] = useState<MvpRoadmapArtifact | null>(null);
+  const [roadmapLoading, setRoadmapLoading] = useState(false);
+  const [roadmapBusy, setRoadmapBusy] = useState(false);
+  const [buildPlan, setBuildPlan] = useState<BuildPlanArtifact | null>(null);
+  const [buildPlanLoading, setBuildPlanLoading] = useState(false);
+  const [buildPlanBusy, setBuildPlanBusy] = useState(false);
   const [signals, setSignals] = useState<Signal[]>([]);
   const [timeline, setTimeline] = useState<OpportunityTimelineItem[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
@@ -397,6 +753,9 @@ export default function OpportunityDetailPage() {
   const prdPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const archPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const monoPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const feasibilityPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const roadmapPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const buildPlanPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (!session || !id) return;
@@ -449,6 +808,39 @@ export default function OpportunityDetailPage() {
     }
   }, [id]);
 
+  const loadFeasibility = useCallback(async () => {
+    if (!id) return;
+    setFeasibilityLoading(true);
+    try {
+      const data = await fetchFeasibility(id);
+      setFeasibility(data);
+    } finally {
+      setFeasibilityLoading(false);
+    }
+  }, [id]);
+
+  const loadRoadmap = useCallback(async () => {
+    if (!id) return;
+    setRoadmapLoading(true);
+    try {
+      const data = await fetchMvpRoadmap(id);
+      setRoadmap(data);
+    } finally {
+      setRoadmapLoading(false);
+    }
+  }, [id]);
+
+  const loadBuildPlan = useCallback(async () => {
+    if (!id) return;
+    setBuildPlanLoading(true);
+    try {
+      const data = await fetchBuildPlan(id);
+      setBuildPlan(data);
+    } finally {
+      setBuildPlanLoading(false);
+    }
+  }, [id]);
+
   useEffect(() => {
     if (tab === "prd" && session) void loadPrd();
   }, [tab, session, loadPrd]);
@@ -460,6 +852,18 @@ export default function OpportunityDetailPage() {
   useEffect(() => {
     if (tab === "monetization" && session) void loadMono();
   }, [tab, session, loadMono]);
+
+  useEffect(() => {
+    if (tab === "feasibility" && session) void loadFeasibility();
+  }, [tab, session, loadFeasibility]);
+
+  useEffect(() => {
+    if (tab === "mvp-roadmap" && session) void loadRoadmap();
+  }, [tab, session, loadRoadmap]);
+
+  useEffect(() => {
+    if (tab === "build-plan" && session) void loadBuildPlan();
+  }, [tab, session, loadBuildPlan]);
 
   useEffect(() => {
     if (tab !== "signals" || !session || !id) return;
@@ -484,6 +888,9 @@ export default function OpportunityDetailPage() {
       if (prdPollRef.current) clearInterval(prdPollRef.current);
       if (archPollRef.current) clearInterval(archPollRef.current);
       if (monoPollRef.current) clearInterval(monoPollRef.current);
+      if (feasibilityPollRef.current) clearInterval(feasibilityPollRef.current);
+      if (roadmapPollRef.current) clearInterval(roadmapPollRef.current);
+      if (buildPlanPollRef.current) clearInterval(buildPlanPollRef.current);
     };
   }, []);
 
@@ -583,6 +990,102 @@ export default function OpportunityDetailPage() {
     }
   }
 
+  function startFeasibilityPolling() {
+    if (feasibilityPollRef.current) clearInterval(feasibilityPollRef.current);
+    let attempts = 0;
+    feasibilityPollRef.current = setInterval(async () => {
+      attempts++;
+      const data = await fetchFeasibility(id).catch(() => null);
+      if (data) {
+        setFeasibility(data);
+        setFeasibilityBusy(false);
+        if (feasibilityPollRef.current) clearInterval(feasibilityPollRef.current);
+        setFeedback("Feasibility report generated successfully.");
+      } else if (attempts >= POLL_MAX_ATTEMPTS) {
+        setFeasibilityBusy(false);
+        if (feasibilityPollRef.current) clearInterval(feasibilityPollRef.current);
+        setFeedback("Feasibility report is taking longer than expected — refresh the page to check.");
+      }
+    }, POLL_INTERVAL_MS);
+  }
+
+  async function handleGenerateFeasibility() {
+    setFeasibilityBusy(true);
+    setFeedback("");
+    setError("");
+    try {
+      await generateFeasibilityReport(id);
+      startFeasibilityPolling();
+    } catch (err) {
+      setFeasibilityBusy(false);
+      setError(getApiErrorMessage(err));
+    }
+  }
+
+  function startRoadmapPolling() {
+    if (roadmapPollRef.current) clearInterval(roadmapPollRef.current);
+    let attempts = 0;
+    roadmapPollRef.current = setInterval(async () => {
+      attempts++;
+      const data = await fetchMvpRoadmap(id).catch(() => null);
+      if (data) {
+        setRoadmap(data);
+        setRoadmapBusy(false);
+        if (roadmapPollRef.current) clearInterval(roadmapPollRef.current);
+        setFeedback("MVP roadmap generated successfully.");
+      } else if (attempts >= POLL_MAX_ATTEMPTS) {
+        setRoadmapBusy(false);
+        if (roadmapPollRef.current) clearInterval(roadmapPollRef.current);
+        setFeedback("MVP roadmap is taking longer than expected — refresh the page to check.");
+      }
+    }, POLL_INTERVAL_MS);
+  }
+
+  async function handleGenerateRoadmap() {
+    setRoadmapBusy(true);
+    setFeedback("");
+    setError("");
+    try {
+      await generateMvpRoadmap(id);
+      startRoadmapPolling();
+    } catch (err) {
+      setRoadmapBusy(false);
+      setError(getApiErrorMessage(err));
+    }
+  }
+
+  function startBuildPlanPolling() {
+    if (buildPlanPollRef.current) clearInterval(buildPlanPollRef.current);
+    let attempts = 0;
+    buildPlanPollRef.current = setInterval(async () => {
+      attempts++;
+      const data = await fetchBuildPlan(id).catch(() => null);
+      if (data) {
+        setBuildPlan(data);
+        setBuildPlanBusy(false);
+        if (buildPlanPollRef.current) clearInterval(buildPlanPollRef.current);
+        setFeedback("Build plan generated successfully.");
+      } else if (attempts >= POLL_MAX_ATTEMPTS) {
+        setBuildPlanBusy(false);
+        if (buildPlanPollRef.current) clearInterval(buildPlanPollRef.current);
+        setFeedback("Build plan is taking longer than expected — refresh the page to check.");
+      }
+    }, POLL_INTERVAL_MS);
+  }
+
+  async function handleGenerateBuildPlan() {
+    setBuildPlanBusy(true);
+    setFeedback("");
+    setError("");
+    try {
+      await generateBuildPlan(id);
+      startBuildPlanPolling();
+    } catch (err) {
+      setBuildPlanBusy(false);
+      setError(getApiErrorMessage(err));
+    }
+  }
+
   if (authLoading || dataLoading) {
     return (
       <main className="page-shell">
@@ -639,14 +1142,14 @@ export default function OpportunityDetailPage() {
       {error ? <p className="status-line error">{error}</p> : null}
 
       <nav className="tab-nav">
-        {(["overview", "prd", "architecture", "monetization", "signals", "timeline"] as Tab[]).map((t) => (
+        {(["overview", "prd", "architecture", "monetization", "feasibility", "mvp-roadmap", "build-plan", "signals", "timeline"] as Tab[]).map((t) => (
           <button
             key={t}
             type="button"
             className={`tab-btn${tab === t ? " tab-active" : ""}`}
             onClick={() => setTab(t)}
           >
-            {t === "prd" ? "PRD" : t.charAt(0).toUpperCase() + t.slice(1)}
+            {t === "prd" ? "PRD" : t === "mvp-roadmap" ? "MVP Roadmap" : t === "build-plan" ? "Build Plan" : t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
         ))}
       </nav>
@@ -709,6 +1212,45 @@ export default function OpportunityDetailPage() {
             mono={mono}
             onRegenerate={handleGenerateMonetization}
             busy={monoBusy}
+            canWrite={canWrite}
+          />
+        )
+      ) : null}
+
+      {tab === "feasibility" ? (
+        feasibilityLoading ? (
+          <article className="panel"><p>Loading feasibility report…</p></article>
+        ) : (
+          <FeasibilityView
+            feasibility={feasibility}
+            onRegenerate={handleGenerateFeasibility}
+            busy={feasibilityBusy}
+            canWrite={canWrite}
+          />
+        )
+      ) : null}
+
+      {tab === "mvp-roadmap" ? (
+        roadmapLoading ? (
+          <article className="panel"><p>Loading MVP roadmap…</p></article>
+        ) : (
+          <MvpRoadmapView
+            roadmap={roadmap}
+            onRegenerate={handleGenerateRoadmap}
+            busy={roadmapBusy}
+            canWrite={canWrite}
+          />
+        )
+      ) : null}
+
+      {tab === "build-plan" ? (
+        buildPlanLoading ? (
+          <article className="panel"><p>Loading build plan…</p></article>
+        ) : (
+          <BuildPlanView
+            plan={buildPlan}
+            onRegenerate={handleGenerateBuildPlan}
+            busy={buildPlanBusy}
             canWrite={canWrite}
           />
         )

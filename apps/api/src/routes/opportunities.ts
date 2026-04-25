@@ -12,7 +12,10 @@ import {
 import {
   generatePrd, getPrd,
   generateArchitecture, getArchitecture,
-  generateMonetization, getMonetization
+  generateMonetization, getMonetization,
+  generateFeasibility, getFeasibility,
+  generateMvpRoadmap, getMvpRoadmap,
+  generateBuildPlan, getBuildPlan
 } from "../controllers/prd-controller.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
@@ -72,4 +75,22 @@ export async function registerOpportunityRoutes(app: FastifyInstance) {
     generateMonetization
   );
   app.get("/opportunities/:id/monetization", { preHandler: [requireAuth] }, getMonetization);
+  app.post(
+    "/opportunities/:id/feasibility",
+    { preHandler: [requireAuth, requireRole(opportunityWriteRoles)] },
+    generateFeasibility
+  );
+  app.get("/opportunities/:id/feasibility", { preHandler: [requireAuth] }, getFeasibility);
+  app.post(
+    "/opportunities/:id/mvp-roadmap",
+    { preHandler: [requireAuth, requireRole(opportunityWriteRoles)] },
+    generateMvpRoadmap
+  );
+  app.get("/opportunities/:id/mvp-roadmap", { preHandler: [requireAuth] }, getMvpRoadmap);
+  app.post(
+    "/opportunities/:id/build-plan",
+    { preHandler: [requireAuth, requireRole(opportunityWriteRoles)] },
+    generateBuildPlan
+  );
+  app.get("/opportunities/:id/build-plan", { preHandler: [requireAuth] }, getBuildPlan);
 }

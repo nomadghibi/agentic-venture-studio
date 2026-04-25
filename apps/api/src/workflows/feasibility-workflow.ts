@@ -4,6 +4,7 @@ import {
   listSignalsForOpportunity,
   getLatestOpportunityArtifact,
   updateOpportunityScores,
+  upsertOpportunityArtifact,
   createWorkflowEvent
 } from "@avs/db";
 import type { PrdContent } from "@avs/types";
@@ -68,6 +69,14 @@ export async function runFeasibilityWorkflow(input: FeasibilityWorkflowInput) {
     strategicFitScore: opportunity.strategicFitScore,
     portfolioValueScore: opportunity.portfolioValueScore
   });
+
+  await upsertOpportunityArtifact(
+    input.opportunityId,
+    input.workspaceId,
+    "feasibility-report",
+    `Feasibility Report: ${opportunity.title}`,
+    JSON.stringify(result.output)
+  );
 
   await createWorkflowEvent({
     opportunityId: input.opportunityId,
